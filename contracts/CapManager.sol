@@ -6,10 +6,9 @@ import './zeppelin/SafeMath.sol';
 
 
 contract CapManager is Withdrawable {
-    mapping(address=>uint) contributorCategory;
-    mapping(uint=>uint) categoryCapWei;
     mapping(address=>uint) participatedWei;
-    address public someUniqueAddress;
+    uint public contributorCapWei;
+    address public someUniqueAddress; //uinque address will be part of hash
     uint constant MAX_PURCHASE_WEI = 10 ** 30;
     uint constant internal MAX_DECIMAL_DIFF = 18;
     uint constant internal ETH_DECIMALS = 18;
@@ -21,7 +20,13 @@ contract CapManager is Withdrawable {
 
     using SafeMath for uint;
 
-    constructor (uint _cappedIEOTime, uint _openIEOTime, uint _endIEOTime, address uniqueAddress, address _admin)
+    constructor (
+        uint _cappedIEOTime,
+        uint _openIEOTime,
+        uint _endIEOTime,
+        uint _contributorCapWei,
+        address uniqueAddress,
+        address _admin)
         Withdrawable(_admin)
         public
     {
@@ -29,33 +34,32 @@ contract CapManager is Withdrawable {
         require(_openIEOTime < _endIEOTime);
         require(uniqueAddress != address(0));
 
+        contributorCapWei = _contributorCapWei;
         someUniqueAddress = uniqueAddress;
         cappedIEOStartTime = _cappedIEOTime;
         openIEOStartTime = _openIEOTime;
         endIEOTime = _endIEOTime;
     }
 
-    function getContributorCapWei(address contributor) public view returns(uint capWei) {
-        capWei = categoryCapWei[contributorCategory[contributor]];
-    }
-
     function getContributorRemainingCapWei(address contributor) public view returns(uint capWei) {
-        if(now >= endIEOTime) return 0;
-        if(contributorCategory[contributor] == 0) return 0;
+        if (now >= endIEOTime) return 0;
+        if (participatedWei[contributor] == 0) return 0;
 
-        capWei = categoryCapWei[contributorCategory[contributor]];
+        if (now > openIEOStartTime) {
+            capWei = MAX_PURCHASE_WEI;
+        } else {
+            capWei = contributorCapWei.sub(participatedWei[contributor]);
+        }
     }
 
     function eligible(address contributor, uint amountWei) public view returns(uint) {
         if(now < cappedIEOStartTime) return 0;
         if(now >= endIEOTime) return 0;
-        if(contributorCategory[contributor] == 0) return 0;
 
         if (now < openIEOStartTime) {
-            uint capWei = categoryCapWei[contributorCategory[contributor]];
-            if (participatedWei[contributor] >= capWei) return 0;
+            if (participatedWei[contributor] >= contributorCapWei) return 0;
 
-            uint remainingCap = capWei.sub(participatedWei[contributor]);
+            uint remainingCap = contributorCapWei.sub(participatedWei[contributor]);
             if (amountWei > remainingCap) return remainingCap;
             return amountWei;
         }
@@ -63,22 +67,8 @@ contract CapManager is Withdrawable {
         return amountWei;
     }
 
-    function setCagtegoryCap(uint category, uint capWei) public onlyAdmin {
-        categoryCapWei[category] = capWei;
-    }
-
-    function setContributorCategory(
-        address contributor,
-        uint category,
-        address thisAddress,
-        uint8 v,
-        bytes32 r,
-        bytes32 s) public onlyOperator
-    {
-        require(thisAddress == address(this));
-        require(verifySignature(keccak256(contributor, category, someUniqueAddress), v, r, s));
-
-        contributorCategory[contributor] = category;
+    function setContributorCap(uint capWei) public onlyAdmin {
+        contributorCapWei = capWei;
     }
 
     function saleStarted() public view returns(bool) {
@@ -89,7 +79,17 @@ contract CapManager is Withdrawable {
         return (now > endIEOTime);
     }
 
-    function eligibleCheckAndIncrement(address contributor, uint amountInWei) internal returns(uint) {
+    function validateContributor(address contributor, uint8 v, bytes32 r, bytes32 s) internal view returns(bool)
+    {
+        require(verifySignature(keccak256(contributor, someUniqueAddress), v, r, s));
+        return true;
+    }
+
+    function eligibleCheckAndIncrement(
+        address contributor,
+        uint amountInWei)
+        internal returns(uint)
+    {
         uint result = eligible(contributor, amountInWei);
         participatedWei[contributor] = participatedWei[contributor].add( result );
 

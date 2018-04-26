@@ -24,7 +24,7 @@ contract KyberIEOWrapper is Withdrawable {
         kyberNetwork = _kyber;
     }
 
-    event Contribution(address contributor, ERC20 token, uint amountTwei, uint tradedWei, uint change);
+    event ContributionToken(address contributor, ERC20 token, uint amountTwei, uint tradedWei, uint change);
     function contributeWithToken(
         address contributor,
         ERC20 token,
@@ -52,6 +52,6 @@ contract KyberIEOWrapper is Withdrawable {
 
         kyberIeo.contribute.value(amountWei)(contributor, v, r, s);
 
-        emit Contribution(contributor, token, amountWei, amountTwei, change);
+        emit ContributionToken(contributor, token, amountWei, amountTwei, change);
     }
 }

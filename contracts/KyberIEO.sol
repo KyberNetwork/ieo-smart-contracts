@@ -1,12 +1,13 @@
-pragma solidity 0.4.23;
+pragma solidity ^0.4.23;
 
 
 import './CapManager.sol';
 import './ERC20Interface.sol';
 import './IEORate.sol';
+import './KyberIEOInterface.sol';
 
 
-contract KyberIEO is CapManager {
+contract KyberIEO is KyberIEOInterface, CapManager {
     ERC20 public token;
     uint  public raisedWei;
     uint  public distributed;
@@ -19,11 +20,11 @@ contract KyberIEO is CapManager {
         address _contributionWallet,
         ERC20 _token,
         uint _contributorCapWei,
-        uint ID,
+        uint _IEOId,
         uint _cappedSaleStart,
         uint _publicSaleStart,
         uint _publicSaleEnd)
-        CapManager(_cappedSaleStart, _publicSaleStart, _publicSaleEnd, _contributorCapWei, ID, _admin)
+        CapManager(_cappedSaleStart, _publicSaleStart, _publicSaleEnd, _contributorCapWei, _IEOId, _admin)
         public
     {
         require(_token != address(0));
@@ -47,7 +48,7 @@ contract KyberIEO is CapManager {
     }
 
     event Contribution(address contributor, uint distributed, uint payedWei);
-    function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) public payable returns(uint) {
+    function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) external payable returns(bool) {
         require(!haltSale);
         require(saleStarted());
         require(!saleEnded());
@@ -72,7 +73,7 @@ contract KyberIEO is CapManager {
 
         emit Contribution(contributor, tokenQty, weiPayment);
 
-        return weiPayment;
+        return true;
     }
 
     // just to check that funds goes to the right place

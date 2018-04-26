@@ -2,7 +2,6 @@ pragma solidity ^0.4.23;
 
 
 import './Withdrawable.sol';
-import './CapManagerInterface.sol';
 import './zeppelin/SafeMath.sol';
 
 
@@ -10,7 +9,7 @@ import './zeppelin/SafeMath.sol';
 //       IEO will have 2 phases:
 //          First phase is capped IEO where each contributor can contribute up to capped amount.
 //          Second phase will be open for unlimited contributions that are blocked only by amount of tokens.
-contract CapManager is Withdrawable, CapManagerInterface {
+contract CapManager is Withdrawable {
     mapping(address=>uint) participatedWei;
     uint public contributorCapWei;
     uint public IEOId; //uinque ID will be part of hash

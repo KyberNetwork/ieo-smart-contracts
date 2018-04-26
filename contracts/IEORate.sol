@@ -7,15 +7,16 @@ import './zeppelin/SafeMath.sol';
 
 contract IEORate is Withdrawable {
 
-    uint public rateEthToToken; // bps = 10000, so if rateEthToTokenBps is 10000 it means we trade one ether to one token.
+    uint public rateEthToToken;
 
     constructor(address admin) Withdrawable(admin) public
     {}
 
-    event setRate (uint rate, address sender);
+    event RateSet (uint rate, address sender);
 
     function setRateEthToToken(uint rate) public onlyOperator {
         rateEthToToken = rate;
+        emit RateSet(rate, msg.sender);
     }
 
     function getRate () public view returns(uint) {

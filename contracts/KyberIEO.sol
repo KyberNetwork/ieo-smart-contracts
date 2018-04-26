@@ -19,11 +19,11 @@ contract KyberIEO is CapManager {
         address _contributionWallet,
         ERC20 _token,
         uint _contributorCapWei,
-        uint ID,
+        uint _IEOId,
         uint _cappedSaleStart,
         uint _publicSaleStart,
         uint _publicSaleEnd)
-        CapManager(_cappedSaleStart, _publicSaleStart, _publicSaleEnd, _contributorCapWei, ID, _admin)
+        CapManager(_cappedSaleStart, _publicSaleStart, _publicSaleEnd, _contributorCapWei, _IEOId, _admin)
         public
     {
         require(_token != address(0));

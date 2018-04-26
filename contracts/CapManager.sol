@@ -13,7 +13,7 @@ contract CapManager is Withdrawable {
     mapping(address=>uint) participatedWei;
     uint public contributorCapWei;
     uint public IEOId; //uinque ID will be part of hash
-    uint constant MAX_PURCHASE_WEI = (2 ** 256) - 1;
+    uint constant MAX_PURCHASE_WEI = uint(- 1);
     uint public cappedIEOStartTime;
     uint public openIEOStartTime; //open IEO means no cap on purchase amount of KYC addresses.
     uint public endIEOTime;

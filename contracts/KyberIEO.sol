@@ -9,55 +9,49 @@ import './IEORate.sol';
 contract KyberIEO is CapManager {
     ERC20 public token;
     uint  public raisedWei;
-    uint  public soldTwei;
+    uint  public distributed;
     bool  public haltSale;
-    uint  public tokenDecimals;
-    address public IEOWrapperContract;
     IEORate public IEORateContract;
     address public contributionWallet;
-
-    mapping(bytes32=>uint) public proxyPurchases;
 
     constructor (
         address _admin,
         address _contributionWallet,
         ERC20 _token,
         uint _contributorCapWei,
-        address uinqueAddress,
+        uint ID,
         uint _cappedSaleStart,
         uint _publicSaleStart,
         uint _publicSaleEnd)
-        CapManager(_cappedSaleStart, _publicSaleStart, _publicSaleEnd, _contributorCapWei, _admin, uinqueAddress)
+        CapManager(_cappedSaleStart, _publicSaleStart, _publicSaleEnd, _contributorCapWei, ID, _admin)
         public
     {
         require(_token != address(0));
         require(_contributionWallet != address(0));
-
-        tokenDecimals = token.decimals();
-        require(tokenDecimals > 0);
 
         IEORateContract = new IEORate(_admin);
         contributionWallet = _contributionWallet;
         token = _token;
     }
 
+    event SaleHalted(address sender);
     function haltSale() public onlyAlerter {
         haltSale = true;
+        emit SaleHalted(msg.sender);
     }
 
+    event SaleResumed(address sender);
     function resumeSale() public onlyAdmin {
         haltSale = false;
+        emit SaleResumed(msg.sender);
     }
 
-    event Contribute(address _buyer, uint _tokenTwei, uint _payedWei);
-
+    event Contribution(address contributor, uint distributed, uint payedWei);
     function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) public payable returns(uint) {
-        require(tx.gasprice <= 50000000000 wei);
         require(!haltSale);
         require(saleStarted());
         require(!saleEnded());
-        require(IEORateContract.getRateBps() > 0);
-        require((msg.sender == contributor) || (msg.sender == IEOWrapperContract));
+        require(IEORateContract.getRate() > 0);
         require(validateContributor(contributor, v, r, s));
 
         uint weiPayment = eligibleCheckAndIncrement(contributor, msg.value);
@@ -69,31 +63,26 @@ contract KyberIEO is CapManager {
         }
 
         // send payment to wallet
-        sendETHToSaleWallet(weiPayment);
+        sendETHToContributionWallet(weiPayment);
         raisedWei = raisedWei.add(weiPayment);
-        uint tokenQtyTwei = calcDstQty(weiPayment, ETH_DECIMALS, tokenDecimals, IEORateContract.getRateBps());
+        uint tokenQty = weiPayment.mul(IEORateContract.getRate());
 
-        require(token.transfer(contributor, tokenQtyTwei));
-        soldTwei.add(tokenQtyTwei);
+        require(token.transfer(contributor, tokenQty));
+        distributed.add(tokenQty);
 
-        emit Contribute(contributor, tokenQtyTwei, weiPayment);
+        emit Contribution(contributor, tokenQty, weiPayment);
 
         return weiPayment;
-    }
-
-    function setIEOWrapperAddress(address _IEOWrapper) public onlyAdmin {
-        require(_IEOWrapper != address(0));
-        IEOWrapperContract = _IEOWrapper;
     }
 
     // just to check that funds goes to the right place
     // tokens are not given in return
     function debugBuy() public payable {
         require(msg.value == 123);
-        sendETHToSaleWallet(msg.value);
+        sendETHToContributionWallet(msg.value);
     }
 
-    function sendETHToSaleWallet(uint valueWei) internal {
+    function sendETHToContributionWallet(uint valueWei) internal {
         contributionWallet.transfer(valueWei);
     }
 }

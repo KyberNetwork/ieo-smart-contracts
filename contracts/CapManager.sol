@@ -8,12 +8,8 @@ import './zeppelin/SafeMath.sol';
 contract CapManager is Withdrawable {
     mapping(address=>uint) participatedWei;
     uint public contributorCapWei;
-    address public someUniqueAddress; //uinque address will be part of hash
-    uint constant MAX_PURCHASE_WEI = 10 ** 30;
-    uint constant internal MAX_DECIMAL_DIFF = 18;
-    uint constant internal ETH_DECIMALS = 18;
-    uint constant internal BPS = 10000;
-    uint constant internal MAX_RATE = (BPS * 10**6); // up to 1M tokens per ETH
+    uint public ieoId; //uinque ID will be part of hash
+    uint constant MAX_PURCHASE_WEI = (2 ** 256) - 1;
     uint public cappedIEOStartTime;
     uint public openIEOStartTime; //open IEO means no cap on purchase amount of KYC addresses.
     uint public endIEOTime;
@@ -25,54 +21,52 @@ contract CapManager is Withdrawable {
         uint _openIEOTime,
         uint _endIEOTime,
         uint _contributorCapWei,
-        address uniqueAddress,
+        uint ID,
         address _admin)
         Withdrawable(_admin)
         public
     {
         require(_cappedIEOTime < _openIEOTime);
         require(_openIEOTime < _endIEOTime);
-        require(uniqueAddress != address(0));
+        require(ID != 0);
 
         contributorCapWei = _contributorCapWei;
-        someUniqueAddress = uniqueAddress;
+        ieoId = ID;
         cappedIEOStartTime = _cappedIEOTime;
         openIEOStartTime = _openIEOTime;
         endIEOTime = _endIEOTime;
     }
 
-    function getContributorRemainingCapWei(address contributor) public view returns(uint capWei) {
-        if (now >= endIEOTime) return 0;
-        if (participatedWei[contributor] == 0) return 0;
+    function getContributorRemainingCap(address contributor) public view returns(uint capWei) {
+        if (!saleStarted()) return 0;
+        if (saleEnded()) return 0;
 
-        if (now > openIEOStartTime) {
+        if (openSaleStarted()) {
             capWei = MAX_PURCHASE_WEI;
         } else {
-            capWei = contributorCapWei.sub(participatedWei[contributor]);
+            if (participatedWei[contributor] >= contributorCapWei) capWei = 0;
+            else capWei = contributorCapWei.sub(participatedWei[contributor]);
         }
     }
 
     function eligible(address contributor, uint amountWei) public view returns(uint) {
-        if(now < cappedIEOStartTime) return 0;
-        if(now >= endIEOTime) return 0;
-
-        if (now < openIEOStartTime) {
-            if (participatedWei[contributor] >= contributorCapWei) return 0;
-
-            uint remainingCap = contributorCapWei.sub(participatedWei[contributor]);
-            if (amountWei > remainingCap) return remainingCap;
-            return amountWei;
-        }
-
+        uint remainingCap = getContributorRemainingCap(contributor);
+        if (amountWei > remainingCap) return remainingCap;
         return amountWei;
     }
 
+    event ContributorCapSet(uint capWei, address sender);
     function setContributorCap(uint capWei) public onlyAdmin {
         contributorCapWei = capWei;
+        emit ContributorCapSet(capWei, msg.sender);
     }
 
     function saleStarted() public view returns(bool) {
         return (now >= cappedIEOStartTime);
+    }
+
+    function openSaleStarted() public view returns(bool) {
+        return (now > openIEOStartTime);
     }
 
     function saleEnded() public view returns(bool) {
@@ -81,7 +75,7 @@ contract CapManager is Withdrawable {
 
     function validateContributor(address contributor, uint8 v, bytes32 r, bytes32 s) internal view returns(bool)
     {
-        require(verifySignature(keccak256(contributor, someUniqueAddress), v, r, s));
+        require(verifySignature(keccak256(contributor, ieoId), v, r, s));
         return true;
     }
 
@@ -91,7 +85,7 @@ contract CapManager is Withdrawable {
         internal returns(uint)
     {
         uint result = eligible(contributor, amountInWei);
-        participatedWei[contributor] = participatedWei[contributor].add( result );
+        participatedWei[contributor] = participatedWei[contributor].add(result);
 
         return result;
     }
@@ -99,16 +93,5 @@ contract CapManager is Withdrawable {
     function verifySignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal view returns(bool) {
         address signer = ecrecover(hash, v, r, s);
         return operators[signer];
-    }
-
-    function calcDstQty(uint srcQty, uint srcDecimals, uint dstDecimals, uint rateBps) internal pure returns(uint) {
-
-        if (dstDecimals >= srcDecimals) {
-            require((dstDecimals.sub(srcDecimals)) <= MAX_DECIMAL_DIFF);
-            return ((srcQty.mul(rateBps).mul(10 ** (dstDecimals.sub(srcDecimals))))).div(BPS);
-        } else {
-            require((srcDecimals.sub(dstDecimals)) <= MAX_DECIMAL_DIFF);
-            return srcQty.mul(rateBps).div(BPS.mul(10 ** (srcDecimals.sub(dstDecimals))));
-        }
     }
 }

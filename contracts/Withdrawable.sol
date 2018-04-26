@@ -35,8 +35,4 @@ contract Withdrawable is PermissionGroups {
         sendTo.transfer(amount);
         emit EtherWithdraw(amount, sendTo);
     }
-
-    function getNow() external view returns(uint) {
-        return now;
-    }
 }

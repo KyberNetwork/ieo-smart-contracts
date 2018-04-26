@@ -12,46 +12,47 @@ interface KyberNetwork {
         returns (uint expectedRate, uint slippageRate);
 }
 
+interface KyberIEOInterface {
+    function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) external payable returns(uint);
+    function getContributorRemainingCap(address contributor) external view returns(uint capWei);
+    function IEOId() external view returns(uint);
+}
+
 
 contract KyberIEOWrapper is Withdrawable {
 
-    KyberNetwork kyberNetwork;
-    KyberIEO kyberIeo;
     ERC20 constant internal ETH_TOKEN_ADDRESS = ERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
-    constructor(KyberNetwork _kyber, address _admin) public Withdrawable(_admin) {
-        require (_kyber != address(0));
-        kyberNetwork = _kyber;
-    }
+    constructor(address _admin) public Withdrawable(_admin) {}
 
     event ContributionToken(address contributor, ERC20 token, uint amountTwei, uint tradedWei, uint change);
     function contributeWithToken(
-        address contributor,
         ERC20 token,
         uint amountTwei,
+        uint minConversionRate,
+        KyberNetwork network,
+        KyberIEOInterface kyberIEO,
         uint8 v,
         bytes32 r,
         bytes32 s) public returns(uint)
     {
-        uint weiCap = kyberIeo.getContributorRemainingCap(contributor);
+        uint weiCap = kyberIEO.getContributorRemainingCap(msg.sender);
         require(weiCap > 0);
 
-        uint expectedRate;
-        uint slippageRate;
-        (expectedRate, slippageRate) = kyberNetwork.getExpectedRate(token, ETH_TOKEN_ADDRESS, amountTwei);
+        require(token.transferFrom(msg.sender, this, amountTwei));
 
-        require(expectedRate > 0);
-        require(token.transferFrom(contributor, this, amountTwei));
+        token.approve(address(network), amountTwei);
+        uint amountWei = network.trade(token, amountTwei, ETH_TOKEN_ADDRESS, address(this), weiCap,
+            minConversionRate, address(kyberIEO.IEOId()));
 
-        token.approve(address(kyberNetwork), amountTwei);
-        uint amountWei = kyberNetwork.trade(token, amountTwei, ETH_TOKEN_ADDRESS, address(this), weiCap,
-            slippageRate, address(kyberIeo.IEOId));
+        //emit event here where we still have valid "change" value
+        emit ContributionToken(msg.sender, token, amountWei, amountTwei, token.balanceOf(this));
 
-        uint change = token.balanceOf(this);
-        if (change > 0) token.transfer(contributor, change);
+        if (token.balanceOf(this) > 0) {
+            token.approve(address(network), 0);
+            token.transfer(msg.sender, token.balanceOf(this));
+        }
 
-        kyberIeo.contribute.value(amountWei)(contributor, v, r, s);
-
-        emit ContributionToken(contributor, token, amountWei, amountTwei, change);
+        kyberIEO.contribute.value(amountWei)(msg.sender, v, r, s);
     }
 }

@@ -1,0 +1,33 @@
+{
+  "name": "ieo-smart-contracts",
+  "version": "1.0.0",
+  "description": "package for ieo-smart-contracts repository",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "bignumber": "^1.1.0",
+    "bignumber.js": "^7.0.1",
+    "truffle": "^4.1.7"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KyberNetwork/ieo-smart-contracts.git"
+  },
+  "keywords": [
+    "IEO",
+    "smart",
+    "contract"
+  ],
+  "author": "ilan d",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KyberNetwork/ieo-smart-contracts/issues"
+  },
+  "homepage": "https://github.com/KyberNetwork/ieo-smart-contracts#readme"
+}

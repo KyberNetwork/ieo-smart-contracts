@@ -52,13 +52,18 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         require(!haltSale);
         require(saleStarted());
         require(!saleEnded());
-        require(IEORateContract.ethToTokenNumerator() > 0);
+
+        uint rateNumerator;
+        uint rateDenominator;
+        (rateNumerator, rateDenominator) = IEORateContract.getRate();
+        require(rateNumerator > 0);
+        require(rateDenominator > 0);
         require(validateContributor(contributor, v, r, s));
 
         uint weiPayment = eligibleCheckAndIncrement(contributor, msg.value);
         require(weiPayment > 0);
 
-        uint tokenQty = weiPayment.mul(IEORateContract.ethToTokenNumerator()).div(IEORateContract.ethToTokenDenominator());
+        uint tokenQty = weiPayment.mul(rateNumerator).div(rateDenominator);
         require(tokenQty > 0);
 
         // send remaining wei to msg.sender, not to recipient

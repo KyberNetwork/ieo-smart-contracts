@@ -10,7 +10,7 @@ import './KyberIEOInterface.sol';
 contract KyberIEO is KyberIEOInterface, CapManager {
     ERC20 public token;
     uint  public raisedWei;
-    uint  public distributed;
+    uint  public distributedTokensTwei;
     bool  public haltSale;
     IEORate public IEORateContract;
     address public contributionWallet;
@@ -47,7 +47,7 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         emit SaleResumed(msg.sender);
     }
 
-    event Contribution(address contributor, uint distributed, uint payedWei);
+    event Contribution(address contributor, uint distributedTokensTwei, uint payedWei);
     function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) external payable returns(bool) {
         require(!haltSale);
         require(saleStarted());
@@ -77,7 +77,7 @@ contract KyberIEO is KyberIEOInterface, CapManager {
 
         //send exchanged tokens to contributor
         require(token.transfer(contributor, tokenQty));
-        distributed = distributed.add(tokenQty);
+        distributedTokensTwei = distributedTokensTwei.add(tokenQty);
 
         emit Contribution(contributor, tokenQty, weiPayment);
 

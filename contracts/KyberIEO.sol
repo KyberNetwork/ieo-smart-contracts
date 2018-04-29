@@ -10,7 +10,7 @@ import './KyberIEOInterface.sol';
 contract KyberIEO is KyberIEOInterface, CapManager {
     ERC20 public token;
     uint  public raisedWei;
-    uint  public distributed;
+    uint  public distributedTokensTwei;
     bool  public haltSale;
     IEORate public IEORateContract;
     address public contributionWallet;
@@ -47,16 +47,24 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         emit SaleResumed(msg.sender);
     }
 
-    event Contribution(address contributor, uint distributed, uint payedWei);
+    event Contribution(address contributor, uint distributedTokensTwei, uint payedWei);
     function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) external payable returns(bool) {
         require(!haltSale);
         require(saleStarted());
         require(!saleEnded());
-        require(IEORateContract.getRate() > 0);
+
+        uint rateNumerator;
+        uint rateDenominator;
+        (rateNumerator, rateDenominator) = IEORateContract.getRate();
+        require(rateNumerator > 0);
+        require(rateDenominator > 0);
         require(validateContributor(contributor, v, r, s));
 
         uint weiPayment = eligibleCheckAndIncrement(contributor, msg.value);
         require(weiPayment > 0);
+
+        uint tokenQty = weiPayment.mul(rateNumerator).div(rateDenominator);
+        require(tokenQty > 0);
 
         // send remaining wei to msg.sender, not to recipient
         if(msg.value > weiPayment) {
@@ -66,10 +74,10 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         // send payment to wallet
         sendETHToContributionWallet(weiPayment);
         raisedWei = raisedWei.add(weiPayment);
-        uint tokenQty = weiPayment.mul(IEORateContract.getRate());
 
+        //send exchanged tokens to contributor
         require(token.transfer(contributor, tokenQty));
-        distributed.add(tokenQty);
+        distributedTokensTwei = distributedTokensTwei.add(tokenQty);
 
         emit Contribution(contributor, tokenQty, weiPayment);
 

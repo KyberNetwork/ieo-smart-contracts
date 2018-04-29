@@ -2,7 +2,7 @@ pragma solidity ^0.4.23;
 
 
 import './Withdrawable.sol';
-import './zeppelin/SafeMath.sol';
+import './SafeMath.sol';
 
 
 contract IEORate is Withdrawable {

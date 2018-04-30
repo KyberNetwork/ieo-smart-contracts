@@ -16,8 +16,8 @@ let network;
 let admin;
 let operator;
 let someUser;
-let rateNumerator = 17;
-let rateDenominator = 39;
+let rateNumerator = 43;
+let rateDenominator = 17;
 let contributionWallet;
 let IEOId = '0x1234';
 let dayInSecs = 24 * 60 * 60;
@@ -160,79 +160,90 @@ contract('KyberIEOWrapper', function(accounts) {
         assert.equal(rxQuantity.valueOf(), expectedTokenQty.valueOf());
     });
 
-    it("test over cap exchange in capped stage.", async function () {
+    it("test above cap exchange in capped stage. ", async function () {
         isStarted = await kyberIEO.IEOStarted();
         assert.equal(isStarted, true, "IEO started should be true now");
-
-        //contributor will have other token and will use it to trade with network
-        let manyTokens = (new BigNumber(10)).pow(otherTokenDecimals + 2 * 1);
-
-        await otherToken.transfer(contributor, manyTokens.valueOf());
-        await otherToken.approve(kyberIEOWrapper.address, approveValueInfinite.valueOf(), {from: contributor});
+        assert.equal((await kyberIEO.IEOEnded()), false, "IEO ended should be false now");
 
         //api: token, amountTwei, minConversionRate, network, kyberIEO, v, r, s
-        let amountTwei = 1000;
-        let result = await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, network.address,
-                            kyberIEO.address, v, r, s, {from: contributor});
+        let amountTwei = 1000000;
 
         let expectedEtherPayment = (new BigNumber(amountTwei)).multipliedBy(otherTokenRate).div(ratePrecision);
         expectedEtherPayment = expectedEtherPayment.minus(expectedEtherPayment.mod(1));
 
-        assert.equal(result.logs[0].args.tradedWei.valueOf(), expectedEtherPayment);
+        //calculate other token Twei balance
+        let contributorCapWei = await kyberIEO.getContributorRemainingCap(contributor);
+        let expectedWeiChange = expectedEtherPayment.minus(contributorCapWei.valueOf());
+        let actualUsedTwei = (new BigNumber(contributorCapWei)).multipliedBy(ratePrecision).div(otherTokenRate);
+        let expectedTweiChange = (new BigNumber(amountTwei)).minus(actualUsedTwei);
+
+        let initialTweiBalance = await otherToken.balanceOf(contributor);
+        let expectedTweiBalanceAfter = (new BigNumber(initialTweiBalance)).minus(actualUsedTwei);
+        let contributorInitialTweiIEO = await IEOToken.balanceOf(contributor);
+
+        let result = await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, network.address,
+                            kyberIEO.address, v, r, s, {from: contributor});
 
 //        console.log(result.logs[0].args)
-        let expectedTokenQty = (new BigNumber(expectedEtherPayment)).multipliedBy(rateNumerator).div(rateDenominator);
-        expectedTokenQty = expectedTokenQty.minus(expectedTokenQty.mod(1));
+        assert.equal(result.logs[0].args.tradedWei.valueOf(), contributorCapWei);
+        assert.equal(result.logs[0].args.changeTwei.valueOf(), expectedTweiChange.valueOf());
+
+        let contributorTweiBalanceOther = await otherToken.balanceOf(contributor);
+        assert.equal(contributorTweiBalanceOther.valueOf(), expectedTweiBalanceAfter.valueOf());
+
+          //calculate IEO token amount
+        let expectedIEOTokenTradedQty = (new BigNumber(contributorCapWei)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedIEOTokenTradedQty = expectedIEOTokenTradedQty.minus(expectedIEOTokenTradedQty.mod(1));
+        let expectedIEOQty = expectedIEOTokenTradedQty.plus(contributorInitialTweiIEO);
         let rxQuantity = await IEOToken.balanceOf(contributor);
-        assert.equal(rxQuantity.valueOf(), expectedTokenQty.valueOf());
+        assert.equal(rxQuantity.valueOf(), expectedIEOQty.valueOf());
     });
-//
-//    it("test get contributor remaining cap in IEO stages + contributions.", async function () {
-//        let now = await web3.eth.getBlock('latest').timestamp;
-//
-//        cappedStartTime = now;
-//        openStartTime = now * 1 + dayInSecs * 1;
-//        endTime = now * 1 + dayInSecs * 2;
-//
-//        tokenDecimals = 18;
-//        IEOToken = await TestToken.new("IEO Token", "IEO", tokenDecimals);
-//
-//        kyberIEO = await KyberIEO.new(admin, contributionWallet, IEOToken.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
-//        await kyberIEO.addOperator(operator);
-//
-//        kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
-//        await IEOToken.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
-//
-//        IEORateAddress = await kyberIEO.IEORateContract();
-//        let IEORateInst = await IEORate.at(IEORateAddress);
-//        await IEORateInst.addOperator(operator);
-//        await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
-//
-//        cap = await kyberIEO.getContributorRemainingCap(contributor);;
-//        assert.equal(cap.valueOf(), capWei.valueOf(), "cap shold be as user cap now");
-//
-//        //contribute and see eligible decrease.
-//        let weiValue = 10000;
-//        let result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
-//
-//        let expectedTokenQty = (new BigNumber(weiValue)).multipliedBy(rateNumerator).div(rateDenominator);
-//        expectedTokenQty = expectedTokenQty.minus(expectedTokenQty.mod(1));
-//        let rxQuantity = await IEOToken.balanceOf(contributor);
-//        assert.equal(rxQuantity.valueOf(), expectedTokenQty.valueOf());
-//
-//        cap = await kyberIEO.getContributorRemainingCap(contributor);;
-//        assert.equal(cap.valueOf(), capWei.minus(weiValue).valueOf(), "cap shold be as user cap now");
-//
-//        await Helper.sendPromise('evm_increaseTime', [(dayInSecs + 1 * 50)]);
-//        await Helper.sendPromise('evm_mine', []);
-//        cap = await kyberIEO.getContributorRemainingCap(someUser);;
-//        assert.equal(cap.valueOf(), maxCapWei.valueOf(), "cap shold be max Cap");
-//
-//        await Helper.sendPromise('evm_increaseTime', [(dayInSecs + 1 * 50)]);
-//        await Helper.sendPromise('evm_mine', []);
-//        cap = await kyberIEO.getContributorRemainingCap(someUser);;
-//        assert.equal(cap, 0, "cap shold be 0");
-//    });
+
+    it("test another trade in open IEO stage.", async function () {
+        let openIEOStarted = await kyberIEO.openIEOStarted();
+        assert.equal(openIEOStarted, false, "open IEO started should be false now");
+        assert.equal((await kyberIEO.IEOEnded()), false, "IEO ended should be false now");
+
+        // make sure trade reverted. cap is 0 now.
+        let contributorCapWei = await kyberIEO.getContributorRemainingCap(contributor);
+        assert.equal(contributorCapWei.valueOf(), 0);
+        let amountTwei = 10000;
+
+        try {
+            await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, network.address,
+                kyberIEO.address, v, r, s, {from: contributor});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //advance and see open IEO started
+        await Helper.sendPromise('evm_increaseTime', [(dayInSecs + 1 * 50)]);
+        await Helper.sendPromise('evm_mine', []);
+        openIEOStarted = await kyberIEO.openIEOStarted();
+        assert.equal(openIEOStarted, true, "open IEO started should be true now");
+        assert.equal((await kyberIEO.IEOEnded()), false, "IEO ended should be false now");
+
+        //api: token, amountTwei, minConversionRate, network, kyberIEO, v, r, s
+        let expectedEtherPayment = (new BigNumber(amountTwei)).multipliedBy(otherTokenRate).div(ratePrecision);
+        expectedEtherPayment = expectedEtherPayment.minus(expectedEtherPayment.mod(1));
+
+        let contributorInitialTweiIEO = await IEOToken.balanceOf(contributor);
+
+        let result = await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, network.address,
+                            kyberIEO.address, v, r, s, {from: contributor});
+
+//        console.log(result.logs[0].args)
+        assert.equal(result.logs[0].args.tradedWei.valueOf(), expectedEtherPayment);
+        assert.equal(result.logs[0].args.changeTwei.valueOf(), 0);
+
+        //calculate IEO token amount
+        let expectedIEOTokenTradedQty = (new BigNumber(expectedEtherPayment)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedIEOTokenTradedQty = expectedIEOTokenTradedQty.minus(expectedIEOTokenTradedQty.mod(1));
+        let expectedIEOQty = expectedIEOTokenTradedQty.plus(contributorInitialTweiIEO);
+        let rxQuantity = await IEOToken.balanceOf(contributor);
+        assert.equal(rxQuantity.valueOf(), expectedIEOQty.valueOf());
+    });
 
 });
 

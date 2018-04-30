@@ -20,7 +20,7 @@ contract KyberIEOWrapper is Withdrawable {
 
     function() public payable {}
 
-    event ContributionByToken(address contributor, ERC20 token, uint amountTwei, uint tradedWei, uint change);
+    event ContributionByToken(address contributor, ERC20 token, uint amountSentTwei, uint tradedWei, uint changeTwei);
     function contributeWithToken(
         ERC20 token,
         uint amountTwei,

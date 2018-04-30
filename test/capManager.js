@@ -1,5 +1,3 @@
-let Permissions = artifacts.require("./PermissionGroups.sol");
-let Withdrawable = artifacts.require("./Withdrawable.sol");
 let CapManager = artifacts.require("./CapManager.sol");
 
 let Helper = require("./helper.js");

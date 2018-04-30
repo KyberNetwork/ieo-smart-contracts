@@ -12,7 +12,7 @@ import './zeppelin/SafeMath.sol';
 contract CapManager is Withdrawable {
     mapping(address=>uint) participatedWei;
     uint public contributorCapWei;
-    uint public IEOId; //uinque ID will be part of hash
+    uint internal IEOId; //uinque ID will be part of hash
     uint constant MAX_PURCHASE_WEI = uint(- 1);
     uint public cappedIEOStartTime;
     uint public openIEOStartTime; //open IEO means no cap on purchase amount of KYC addresses.
@@ -87,6 +87,10 @@ contract CapManager is Withdrawable {
     {
         require(verifySignature(keccak256(contributor, IEOId), v, r, s));
         return true;
+    }
+
+    function getIEOId() external view returns(uint) {
+        return IEOId;
     }
 
     function eligibleCheckAndIncrement(

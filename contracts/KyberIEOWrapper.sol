@@ -36,7 +36,7 @@ contract KyberIEOWrapper is Withdrawable {
 
         token.approve(address(network), amountTwei);
         uint amountWei = network.trade(token, amountTwei, ETH_TOKEN_ADDRESS, address(this), weiCap,
-            minConversionRate, address(kyberIEO.IEOId()));
+            minConversionRate, address(kyberIEO.getIEOId()));
 
         //emit event here where we still have valid "change" value
         emit ContributionByToken(msg.sender, token, amountWei, amountTwei, token.balanceOf(this));

@@ -7,7 +7,7 @@ import './IEORate.sol';
 import './KyberIEOInterface.sol';
 
 
-contract KyberIEO is CapManager {
+contract KyberIEO is KyberIEOInterface, CapManager {
     ERC20 public token;
     uint  public raisedWei;
     uint  public distributedTokensTwei;

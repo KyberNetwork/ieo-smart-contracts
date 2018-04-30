@@ -1,14 +1,20 @@
 pragma solidity ^0.4.23;
 
 
-import './ERC20Interface.sol';
-import './Withdrawable.sol';
-import './KyberIEOInterface.sol';
+import "./ERC20Interface.sol";
+import "./Withdrawable.sol";
+import "./KyberIEOInterface.sol";
 
 
 interface KyberNetwork {
-    function trade(ERC20 src, uint srcAmount, ERC20 dest, address destAddress, uint maxDestAmount,
-        uint minConversionRate, address walletId) external payable returns(uint);
+    function trade(
+        ERC20 src,
+        uint srcAmount,
+        ERC20 dest,
+        address destAddress,
+        uint maxDestAmount,
+        uint minConversionRate,
+        address walletId) external payable returns(uint);
 }
 
 

@@ -1,17 +1,17 @@
 pragma solidity ^0.4.23;
 
 
-import './CapManager.sol';
-import './ERC20Interface.sol';
-import './IEORate.sol';
-import './KyberIEOInterface.sol';
+import "./CapManager.sol";
+import "./ERC20Interface.sol";
+import "./IEORate.sol";
+import "./KyberIEOInterface.sol";
 
 
 contract KyberIEO is KyberIEOInterface, CapManager {
     ERC20 public token;
     uint  public raisedWei;
     uint  public distributedTokensTwei;
-    bool  public haltSale = false;
+    bool  public haltIEO = false;
     IEORate public IEORateContract;
     address public contributionWallet;
 
@@ -35,21 +35,21 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         token = _token;
     }
 
-    event SaleHalted(address sender);
-    function haltSale() public onlyAlerter {
-        haltSale = true;
-        emit SaleHalted(msg.sender);
+    event IEOHalted(address sender);
+    function haltIEO() public onlyAlerter {
+        haltIEO = true;
+        emit IEOHalted(msg.sender);
     }
 
-    event SaleResumed(address sender);
-    function resumeSale() public onlyAdmin {
-        haltSale = false;
-        emit SaleResumed(msg.sender);
+    event IEOResumed(address sender);
+    function resumeIEO() public onlyAdmin {
+        haltIEO = false;
+        emit IEOResumed(msg.sender);
     }
 
     event Contribution(address contributor, uint distributedTokensTwei, uint payedWei);
     function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) external payable returns(bool) {
-        require(!haltSale);
+        require(!haltIEO);
         require(IEOStarted());
         require(!IEOEnded());
 

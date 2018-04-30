@@ -81,8 +81,8 @@ contract ERC20Basic {
  */
 contract ERC20 is ERC20Basic {
     function allowance(address owner, address spender) public view returns (uint);
-    function transferFrom(address from, address to, uint value) public;
-    function approve(address spender, uint value) public;
+    function transferFrom(address from, address to, uint value) public returns(bool);
+    function approve(address spender, uint value) public returns(bool);
     event Approval(address indexed owner, address indexed spender, uint value);
 }
 
@@ -133,7 +133,7 @@ contract StandardToken is BasicToken, ERC20 {
 
     mapping (address => mapping (address => uint)) allowed;
 
-    function transferFrom(address _from, address _to, uint _value) public {
+    function transferFrom(address _from, address _to, uint _value) public returns (bool) {
 
         uint _allowance = allowed[_from][msg.sender];
 
@@ -144,11 +144,13 @@ contract StandardToken is BasicToken, ERC20 {
         balances[_from] = balances[_from].sub(_value);
         allowed[_from][msg.sender] = _allowance.sub(_value);
         emit Transfer(_from, _to, _value);
+        return true;
     }
 
-    function approve(address _spender, uint _value) public {
+    function approve(address _spender, uint _value) public returns(bool) {
         allowed[msg.sender][_spender] = _value;
         emit Approval(msg.sender, _spender, _value);
+        return true;
     }
 
     function allowance(address _owner, address _spender) public view returns (uint remaining) {

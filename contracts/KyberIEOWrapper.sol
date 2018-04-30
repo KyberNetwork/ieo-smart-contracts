@@ -18,6 +18,8 @@ contract KyberIEOWrapper is Withdrawable {
 
     constructor(address _admin) public Withdrawable(_admin) {}
 
+    function() public payable {}
+
     event ContributionByToken(address contributor, ERC20 token, uint amountTwei, uint tradedWei, uint change);
     function contributeWithToken(
         ERC20 token,
@@ -35,13 +37,15 @@ contract KyberIEOWrapper is Withdrawable {
         require(token.transferFrom(msg.sender, this, amountTwei));
 
         token.approve(address(network), amountTwei);
-        uint amountWei = network.trade(token, amountTwei, ETH_TOKEN_ADDRESS, address(this), weiCap,
+        uint amountWei = network.trade(token, amountTwei, ETH_TOKEN_ADDRESS, this, weiCap,
             minConversionRate, address(kyberIEO.getIEOId()));
 
         //emit event here where we still have valid "change" value
-        emit ContributionByToken(msg.sender, token, amountWei, amountTwei, token.balanceOf(this));
+        emit ContributionByToken(msg.sender, token, amountTwei, amountWei, token.balanceOf(this));
 
         if (token.balanceOf(this) > 0) {
+            //if not all tokens were taken by network approve value is not zereod.
+            // must zero it so next time will not revert.
             token.approve(address(network), 0);
             token.transfer(msg.sender, token.balanceOf(this));
         }

@@ -1,5 +1,3 @@
-let Permissions = artifacts.require("./PermissionGroups.sol");
-let Withdrawable = artifacts.require("./Withdrawable.sol");
 let TestToken = artifacts.require("./mockContracts/TestToken.sol");
 let KyberIEO = artifacts.require("./KyberIEO.sol");
 let IEORate = artifacts.require("./IEORate.sol");
@@ -53,7 +51,7 @@ contract('KyberIEO', function(accounts) {
         contributionWalletStartBalance = await Helper.getBalancePromise(contributionWallet);
 
         operator = accounts[3];
-        someUser = accounts[1];
+        someUser = accounts[4];
 
         token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
 

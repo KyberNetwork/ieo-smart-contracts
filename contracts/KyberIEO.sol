@@ -11,7 +11,7 @@ contract KyberIEO is CapManager {
     ERC20 public token;
     uint  public raisedWei;
     uint  public distributedTokensTwei;
-    bool  public haltSale;
+    bool  public haltSale = false;
     IEORate public IEORateContract;
     address public contributionWallet;
 

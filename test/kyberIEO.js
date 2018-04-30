@@ -142,6 +142,48 @@ contract('KyberIEO', function(accounts) {
         assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
     });
 
+    it("test contribution reverted when cap reached and later success in open IEO stage.", async function () {
+        let weiValue = 100000;
+
+        let openIEOStarted = await kyberIEO.openIEOStarted();
+        assert.equal(openIEOStarted, false, "open IEO started should be false now");
+        assert.equal((await kyberIEO.IEOEnded()), false, "IEO ended should be false now");
+
+        //see trade reverted if not open stage
+        try {
+            await await kyberIEO.contribute(contributor, v, r, s, {value: weiValue.valueOf(), from: contributor});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //advance and see open IEO started
+        await Helper.sendPromise('evm_increaseTime', [(dayInSecs + 1 * 50)]);
+        await Helper.sendPromise('evm_mine', []);
+        openIEOStarted = await kyberIEO.openIEOStarted();
+        assert.equal(openIEOStarted, true, "open IEO started should be true now");
+        assert.equal((await kyberIEO.IEOEnded()), false, "IEO ended should be false now");
+
+        let result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue.valueOf(), from: contributor});
+
+        let expectedTokenQtyThisTrade = (new BigNumber(weiValue)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedTokenQtyThisTrade = expectedTokenQtyThisTrade.minus(expectedTokenQtyThisTrade.mod(1));
+        contributorTokenTweiBalance += expectedTokenQtyThisTrade.valueOf() * 1;
+
+        assert.equal(result.logs[0].args.distributedTokensTwei.valueOf(), expectedTokenQtyThisTrade.valueOf())
+
+        let rxQuantity = await token.balanceOf(contributor);
+        assert.equal(rxQuantity.valueOf(), contributorTokenTweiBalance.valueOf());
+
+        raisedWei += weiValue * 1;
+        let rxRaisedWei = await kyberIEO.raisedWei();
+        assert.equal(raisedWei.valueOf(), rxRaisedWei.valueOf());
+
+        distributedTokensTwei += 1 * expectedTokenQtyThisTrade;
+        let rxDistributedTokensTwei = await kyberIEO.distributedTokensTwei();
+        assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
+    });
+
     it("test get contributor remaining cap in IEO stages + contributions.", async function () {
         let now = await web3.eth.getBlock('latest').timestamp;
 
@@ -188,5 +230,4 @@ contract('KyberIEO', function(accounts) {
         cap = await kyberIEO.getContributorRemainingCap(someUser);;
         assert.equal(cap, 0, "cap shold be 0");
     });
-
 });

@@ -18,7 +18,6 @@ const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
 const solc = require('solc')
 
 const rand = web3.utils.randomHex(7);
-const privateKey = "0x811594d82cc65443f2192c98a5c133e087e7eeaee3f44ea18d538fba2a60bbcc";//web3.utils.sha3("truffle sucks" + rand);
 if (printPrivateKey) {
   console.log("privateKey", privateKey);
   let path = "privatekey_"  + web3.utils.randomHex(7) + ".txt";
@@ -106,7 +105,7 @@ async function deployContract(solcOutput, contractName, ctorArgs) {
 const contractPath = path.join(__dirname, "../contracts/");
 
 const input = {
-  "SafeMath.sol" : fs.readFileSync(contractPath + 'SafeMath.sol', 'utf8'),
+  "zeppelin/SafeMath.sol" : fs.readFileSync(contractPath + 'zeppelin/SafeMath.sol', 'utf8'),
   "CapManager.sol" : fs.readFileSync(contractPath + 'CapManager.sol', 'utf8'),
   "ERC20Interface.sol" : fs.readFileSync(contractPath + 'ERC20Interface.sol', 'utf8'),
   "IEORate.sol" : fs.readFileSync(contractPath + 'IEORate.sol', 'utf8'),
@@ -161,6 +160,15 @@ function parseInput( jsonInput ) {
 };
 
 
+async function findImports (path) {
+	if (path === 'zeppelin/SafeMath.sol') {
+    const safeMath = fs.readFileSync("../contracts/zeppelin/SafeMath.sol","utf8");
+    return { contents: safeMath }
+  }
+	else
+		return { error: 'File not found' }
+}
+
 async function main() {
   nonce = await web3.eth.getTransactionCount(sender);
   console.log("nonce",nonce);
@@ -170,6 +178,7 @@ async function main() {
 
   console.log("starting compilation");
   const output = await solc.compile({ sources: input }, 1);
+  console.log(output.errors);
   //console.log(output);
   console.log("finished compilation");
 

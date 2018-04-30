@@ -1,27 +1,26 @@
 pragma solidity ^0.4.23;
 
 
-import './Withdrawable.sol';
-import './zeppelin/SafeMath.sol';
+import "./Withdrawable.sol";
+import "./zeppelin/SafeMath.sol";
 
 
 //@Title Cap manager handles contribution cap per contributor.
-//       IEO will have 2 phases:
+//@dev   IEO will have 2 phases:
 //          First phase is capped IEO where each contributor can contribute up to capped amount.
 //          Second phase will be open for unlimited contributions that are blocked only by amount of tokens.
 contract CapManager is Withdrawable {
-    mapping(address=>uint) participatedWei;
+    mapping(address=>uint) public participatedWei;
     uint public contributorCapWei;
     uint internal IEOId; //uinque ID will be part of hash
-    uint constant MAX_PURCHASE_WEI = uint(- 1);
+    uint constant public MAX_PURCHASE_WEI = uint(-1);
     uint public cappedIEOStartTime;
     uint public openIEOStartTime; //open IEO means no cap on purchase amount of KYC addresses.
     uint public endIEOTime;
 
     using SafeMath for uint;
 
-    constructor (
-        uint _cappedIEOTime,
+    constructor(uint _cappedIEOTime,
         uint _openIEOTime,
         uint _endIEOTime,
         uint _contributorCapWei,
@@ -43,7 +42,7 @@ contract CapManager is Withdrawable {
 
     //@dev  getContributorRemainingCap returns remaining cap for a contributor
     //      Assuming that contributor has passed KYC process = is allowed to participate.
-    //      If contributor hasn't participated - it will return full cap according to IEO stage (capped open or close).
+    //      If contributor hasn"t participated - it will return full cap according to IEO stage (capped / open / close).
     //      If contributor already participated. when IEO in capped stage, will return contributor cap less previous
     //        participation. if open contribute stage will return max cap.
     //        notice the participation amount will still be blocked by token balance of this contract.
@@ -72,19 +71,18 @@ contract CapManager is Withdrawable {
     }
 
     function IEOStarted() public view returns(bool) {
-        return (now >= cappedIEOStartTime);
+        return (now >= cappedIEOStartTime); // solium-disable-line security/no-block-members
     }
 
     function openIEOStarted() public view returns(bool) {
-        return (now >= openIEOStartTime);
+        return (now >= openIEOStartTime); // solium-disable-line security/no-block-members
     }
 
     function IEOEnded() public view returns(bool) {
-        return (now >= endIEOTime);
+        return (now >= endIEOTime); // solium-disable-line security/no-block-members
     }
 
-    function validateContributor(address contributor, uint8 v, bytes32 r, bytes32 s) public view returns(bool)
-    {
+    function validateContributor(address contributor, uint8 v, bytes32 r, bytes32 s) public view returns(bool) {
         require(verifySignature(keccak256(contributor, IEOId), v, r, s));
         return true;
     }
@@ -93,10 +91,7 @@ contract CapManager is Withdrawable {
         return IEOId;
     }
 
-    function eligibleCheckAndIncrement(
-        address contributor,
-        uint amountInWei)
-        internal returns(uint)
+    function eligibleCheckAndIncrement(address contributor, uint amountInWei) internal returns(uint)
     {
         uint result = eligible(contributor, amountInWei);
         participatedWei[contributor] = participatedWei[contributor].add(result);

@@ -7,11 +7,11 @@ import './IEORate.sol';
 import './KyberIEOInterface.sol';
 
 
-contract KyberIEO is KyberIEOInterface, CapManager {
+contract KyberIEO is CapManager {
     ERC20 public token;
     uint  public raisedWei;
     uint  public distributedTokensTwei;
-    bool  public haltSale;
+    bool  public haltSale = false;
     IEORate public IEORateContract;
     address public contributionWallet;
 
@@ -21,10 +21,10 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         ERC20 _token,
         uint _contributorCapWei,
         uint _IEOId,
-        uint _cappedSaleStart,
-        uint _publicSaleStart,
-        uint _publicSaleEnd)
-        CapManager(_cappedSaleStart, _publicSaleStart, _publicSaleEnd, _contributorCapWei, _IEOId, _admin)
+        uint _cappedIEOStart,
+        uint _openIEOStart,
+        uint _publicIEOEnd)
+        CapManager(_cappedIEOStart, _openIEOStart, _publicIEOEnd, _contributorCapWei, _IEOId, _admin)
         public
     {
         require(_token != address(0));
@@ -50,8 +50,8 @@ contract KyberIEO is KyberIEOInterface, CapManager {
     event Contribution(address contributor, uint distributedTokensTwei, uint payedWei);
     function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) external payable returns(bool) {
         require(!haltSale);
-        require(saleStarted());
-        require(!saleEnded());
+        require(IEOStarted());
+        require(!IEOEnded());
 
         uint rateNumerator;
         uint rateDenominator;
@@ -82,6 +82,10 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         emit Contribution(contributor, tokenQty, weiPayment);
 
         return true;
+    }
+
+    function getRate () public view returns(uint rateNumerator, uint rateDenominator) {
+        (rateNumerator, rateDenominator) = IEORateContract.getRate();
     }
 
     // just to check that funds goes to the right place

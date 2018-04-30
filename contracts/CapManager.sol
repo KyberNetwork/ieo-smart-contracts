@@ -42,16 +42,16 @@ contract CapManager is Withdrawable {
     }
 
     //@dev  getContributorRemainingCap returns remaining cap for a contributor
-    //      Assumption is that a contributor has passed KYC process = is allowed to participate.
+    //      Assuming that contributor has passed KYC process = is allowed to participate.
     //      If contributor hasn't participated - it will return full cap according to IEO stage (capped open or close).
     //      If contributor already participated. when IEO in capped stage, will return contributor cap less previous
-    //        participation. if open sale stage will return max cap.
+    //        participation. if open contribute stage will return max cap.
     //        notice the participation amount will still be blocked by token balance of this contract.
     function getContributorRemainingCap(address contributor) public view returns(uint capWei) {
-        if (!saleStarted()) return 0;
-        if (saleEnded()) return 0;
+        if (!IEOStarted()) return 0;
+        if (IEOEnded()) return 0;
 
-        if (openSaleStarted()) {
+        if (openIEOStarted()) {
             capWei = MAX_PURCHASE_WEI;
         } else {
             if (participatedWei[contributor] >= contributorCapWei) capWei = 0;
@@ -71,15 +71,15 @@ contract CapManager is Withdrawable {
         emit ContributorCapSet(capWei, msg.sender);
     }
 
-    function saleStarted() public view returns(bool) {
+    function IEOStarted() public view returns(bool) {
         return (now >= cappedIEOStartTime);
     }
 
-    function openSaleStarted() public view returns(bool) {
+    function openIEOStarted() public view returns(bool) {
         return (now >= openIEOStartTime);
     }
 
-    function saleEnded() public view returns(bool) {
+    function IEOEnded() public view returns(bool) {
         return (now >= endIEOTime);
     }
 

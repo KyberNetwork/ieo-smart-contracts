@@ -115,13 +115,5 @@ contract('Withdrawable', function(accounts) {
 
         let balance = await Helper.getBalancePromise(mockWithdrawableInst.address);
         assert.equal(balance.valueOf(), 10, "unexpected balance in withdrawble contract.");
-
-        let now = await mockWithdrawableInst.getNow();
-        console.log('now')
-        console.log(now.valueOf())
-        console.log(now.valueOf())
-        console.log(now.valueOf())
-        console.log(now.valueOf())
-
     });
 });

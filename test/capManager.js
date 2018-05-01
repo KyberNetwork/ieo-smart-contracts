@@ -252,7 +252,7 @@ contract('CapManager', function(accounts) {
     it("verify set cap enabled only for admin.", async function () {
         let now = await web3.eth.getBlock('latest').timestamp;
 
-        cappedStartTime = now ;
+        cappedStartTime = now;
         openStartTime = now * 1 + dayInSecs * 1;
         endTime = now * 1 + dayInSecs * 2;
         capManager = await CapManager.new(cappedStartTime, openStartTime, endTime, capWei.valueOf(), IEOId, admin);
@@ -260,7 +260,7 @@ contract('CapManager', function(accounts) {
         let newCapWei = capWei.plus(300);
         await capManager.setContributorCap(newCapWei.valueOf());
         cap = await capManager.getContributorRemainingCap(someUser);;
-        assert.equal(cap, newCapWei.valueOf());
+        assert.equal(cap.valueOf(), newCapWei.valueOf());
 
         let otherCapWei = capWei.minus(150);
         try {
@@ -274,4 +274,60 @@ contract('CapManager', function(accounts) {
         assert.equal(cap, newCapWei.valueOf());
     });
 
+    it("verify deploy contract revert for bad values.", async function () {
+        let now = await web3.eth.getBlock('latest').timestamp;
+
+        //one succesful deploy
+        cappedStartTime = now;
+        openStartTime = now + 9 * 1;
+        endTime = now * 1 + dayInSecs * 2;
+        capManager = await CapManager.new(cappedStartTime, openStartTime, endTime, capWei.valueOf(), IEOId, admin);
+
+        //revert when starting before now
+        cappedStartTime = now - 1;
+        openStartTime = now + 9 * 1;
+        endTime = now * 1 + dayInSecs * 2;
+        try {
+            capManager = await CapManager.new(cappedStartTime, openStartTime, endTime, capWei.valueOf(), IEOId, admin);
+            assert(false, "expected to throw error in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //revert when open IEO start < IEO Start
+        cappedStartTime = now + 10 * 1;
+        openStartTime = now + 9 * 1;
+        endTime = now * 1 + dayInSecs * 2;
+        try {
+            capManager = await CapManager.new(cappedStartTime, openStartTime, endTime, capWei.valueOf(), IEOId, admin);
+            assert(false, "expected to throw error in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+
+        //revert when IEO End < IEO start
+        cappedStartTime = now ;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = openStartTime - 1;
+        try {
+            capManager = await CapManager.new(cappedStartTime, openStartTime, endTime, capWei.valueOf(), IEOId, admin);
+            assert(false, "expected to throw error in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //revert when IEO ID is 0
+        cappedStartTime = now ;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
+        IEOId = 0;
+
+        try {
+            capManager = await CapManager.new(cappedStartTime, openStartTime, endTime, capWei.valueOf(), IEOId, admin);
+            assert(false, "expected to throw error in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+    });
 });

@@ -310,7 +310,7 @@ contract('KyberIEO', function(accounts) {
         }
     });
 
-    it("test contribution and halt IEO / result IEO API.", async function () {
+    it("test contribution while calling halt IEO and resume IEO API.", async function () {
         let now = await web3.eth.getBlock('latest').timestamp;
 
         cappedStartTime = now;
@@ -383,5 +383,88 @@ contract('KyberIEO', function(accounts) {
         let walletBalanceWei = await Helper.getBalancePromise(contributionWallet);
 
         assert.equal(walletBalanceWei.valueOf(), walletStartBalanceWei.plus(debugBuyWei).valueOf());
+    });
+
+    it("verify deploy contract revert for bad values.", async function () {
+
+        let now = await web3.eth.getBlock('latest').timestamp;
+    //        console.log("now " + now);
+
+        cappedStartTime = now * 1 + dayInSecs * 1;
+        openStartTime = now * 1 + dayInSecs * 2;
+        endTime = now * 1 + dayInSecs * 3;
+        //api: admin, _contributionWallet, _token, _contributorCapWei, _IEOId,  _cappedIEOTime, _openIEOTime, _endIEOTime
+        kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
+
+        // see reverted when token address 0
+        try {
+            kyberIEO = await KyberIEO.new(admin, contributionWallet, 0, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+
+        // see reverted when wallet addresss 0
+        try {
+            kyberIEO = await KyberIEO.new(admin, 0, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+    });
+
+    it("verify contribute reverted when rate is 0 for.", async function () {
+        let weiValue = 30;
+        let now = await web3.eth.getBlock('latest').timestamp;
+
+        cappedStartTime = now;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
+
+        tokenDecimals = 18;
+        token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
+
+        kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
+        await kyberIEO.addOperator(operator);
+
+        //contribute before setting rate
+        try {
+            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //set rate and see success
+        IEORateAddress = await kyberIEO.IEORateContract();
+        let IEORateInst = await IEORate.at(IEORateAddress);
+        await IEORateInst.addOperator(operator);
+        await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
+
+//        result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+//        assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue)
+
+        //now set rate with zero partial
+//        await IEORateInst.setRateEthToToken(0, rateDenominator, {from: operator});
+//        try {
+//            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+//            assert(false, "throw was expected in line above.")
+//        } catch(e){
+//            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+//        }
+//
+//        await IEORateInst.setRateEthToToken(rateNumerator, 0, {from: operator});
+//        try {
+//            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+//            assert(false, "throw was expected in line above.")
+//        } catch(e){
+//            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+//        }
+//
+//        await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
+//
+//        result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+//        assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue)
     });
 });

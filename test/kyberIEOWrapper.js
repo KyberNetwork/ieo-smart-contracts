@@ -145,8 +145,9 @@ contract('KyberIEOWrapper', function(accounts) {
 
         //api: token, amountTwei, minConversionRate, network, kyberIEO, v, r, s
         let amountTwei = 1000;
-        let result = await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, network.address,
-                            kyberIEO.address, v, r, s, {from: contributor});
+        let maxAmountWei = 500;
+        let result = await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, maxAmountWei,
+                    network.address, kyberIEO.address, v, r, s, {from: contributor});
 
         let expectedEtherPayment = (new BigNumber(amountTwei)).multipliedBy(otherTokenRate).div(ratePrecision);
         expectedEtherPayment = expectedEtherPayment.minus(expectedEtherPayment.mod(1));
@@ -167,6 +168,7 @@ contract('KyberIEOWrapper', function(accounts) {
 
         //api: token, amountTwei, minConversionRate, network, kyberIEO, v, r, s
         let amountTwei = 1000000;
+        let maxAmountWei = 100000;
 
         let expectedEtherPayment = (new BigNumber(amountTwei)).multipliedBy(otherTokenRate).div(ratePrecision);
         expectedEtherPayment = expectedEtherPayment.minus(expectedEtherPayment.mod(1));
@@ -181,7 +183,7 @@ contract('KyberIEOWrapper', function(accounts) {
         let expectedTweiBalanceAfter = (new BigNumber(initialTweiBalance)).minus(actualUsedTwei);
         let contributorInitialTweiIEO = await IEOToken.balanceOf(contributor);
 
-        let result = await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, network.address,
+        let result = await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, maxAmountWei, network.address,
                             kyberIEO.address, v, r, s, {from: contributor});
 
 //        console.log(result.logs[0].args)
@@ -208,9 +210,10 @@ contract('KyberIEOWrapper', function(accounts) {
         let contributorCapWei = await kyberIEO.getContributorRemainingCap(contributor);
         assert.equal(contributorCapWei.valueOf(), 0);
         let amountTwei = 10000;
+        let maxAmountWei = 10000;
 
         try {
-            await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, network.address,
+            await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, maxAmountWei, network.address,
                 kyberIEO.address, v, r, s, {from: contributor});
             assert(false, "throw was expected in line above.")
         } catch(e){
@@ -230,7 +233,7 @@ contract('KyberIEOWrapper', function(accounts) {
 
         let contributorInitialTweiIEO = await IEOToken.balanceOf(contributor);
 
-        let result = await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, network.address,
+        let result = await kyberIEOWrapper.contributeWithToken(otherToken.address, amountTwei, 0, maxAmountWei, network.address,
                             kyberIEO.address, v, r, s, {from: contributor});
 
 //        console.log(result.logs[0].args)

@@ -26,37 +26,60 @@ contract KyberIEOWrapper is Withdrawable {
 
     function() public payable {}
 
+    struct ContributeData {
+        ERC20 token;
+        uint amountTwei;
+        uint minConversionRate;
+        uint maxDestAmountWei;
+        KyberNetwork network;
+        KyberIEOInterface kyberIEO;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
     event ContributionByToken(address contributor, ERC20 token, uint amountSentTwei, uint tradedWei, uint changeTwei);
     function contributeWithToken(
         ERC20 token,
         uint amountTwei,
         uint minConversionRate,
+        uint maxDestAmountWei,
         KyberNetwork network,
         KyberIEOInterface kyberIEO,
         uint8 v,
         bytes32 r,
-        bytes32 s) public returns(bool)
+        bytes32 s) external returns(bool)
     {
-        uint weiCap = kyberIEO.getContributorRemainingCap(msg.sender);
+        ContributeData memory data = ContributeData(token, amountTwei, minConversionRate, maxDestAmountWei, network,
+            kyberIEO, v, r, s);
+        return contribute(data);
+    }
+
+
+    function contribute(ContributeData data) internal returns(bool) {
+        uint weiCap = data.kyberIEO.getContributorRemainingCap(msg.sender);
+        if (data.maxDestAmountWei < weiCap) weiCap = data.maxDestAmountWei;
         require(weiCap > 0);
 
-        require(token.transferFrom(msg.sender, this, amountTwei));
+        uint initialTokenBalance = data.token.balanceOf(this);
 
-        token.approve(address(network), amountTwei);
-        uint amountWei = network.trade(token, amountTwei, ETH_TOKEN_ADDRESS, this, weiCap,
-            minConversionRate, address(kyberIEO.getIEOId()));
+        require(data.token.transferFrom(msg.sender, this, data.amountTwei));
+
+        data.token.approve(address(data.network), data.amountTwei);
+        uint amountWei = data.network.trade(data.token, data.amountTwei, ETH_TOKEN_ADDRESS, this, weiCap,
+            data.minConversionRate, address(data.kyberIEO.getIEOId()));
 
         //emit event here where we still have valid "change" value
-        emit ContributionByToken(msg.sender, token, amountTwei, amountWei, token.balanceOf(this));
+        emit ContributionByToken(msg.sender, data.token, data.amountTwei, amountWei, data.token.balanceOf(this));
 
-        if (token.balanceOf(this) > 0) {
+        if (data.token.balanceOf(this) > initialTokenBalance) {
             //if not all tokens were taken by network approve value is not zereod.
             // must zero it so next time will not revert.
-            token.approve(address(network), 0);
-            token.transfer(msg.sender, token.balanceOf(this));
+            data.token.approve(address(data.network), 0);
+            data.token.transfer(msg.sender, data.token.balanceOf(this));
         }
 
-        require(kyberIEO.contribute.value(amountWei)(msg.sender, v, r, s));
+        require(data.kyberIEO.contribute.value(amountWei)(msg.sender, data.v, data.r, data.s));
         return true;
     }
 }

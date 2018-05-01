@@ -11,7 +11,7 @@ contract KyberIEO is KyberIEOInterface, CapManager {
     ERC20 public token;
     uint  public raisedWei;
     uint  public distributedTokensTwei;
-    bool  public haltIEO = false;
+    bool  public haltedIEO = false;
     IEORate public IEORateContract;
     address public contributionWallet;
 
@@ -37,19 +37,19 @@ contract KyberIEO is KyberIEOInterface, CapManager {
 
     event IEOHalted(address sender);
     function haltIEO() public onlyAlerter {
-        haltIEO = true;
+        haltedIEO = true;
         emit IEOHalted(msg.sender);
     }
 
     event IEOResumed(address sender);
     function resumeIEO() public onlyAdmin {
-        haltIEO = false;
+        haltedIEO = false;
         emit IEOResumed(msg.sender);
     }
 
     event Contribution(address contributor, uint distributedTokensTwei, uint payedWei);
     function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) external payable returns(bool) {
-        require(!haltIEO);
+        require(!haltedIEO);
         require(IEOStarted());
         require(!IEOEnded());
 
@@ -66,7 +66,7 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         uint tokenQty = weiPayment.mul(rateNumerator).div(rateDenominator);
         require(tokenQty > 0);
 
-        // send remaining wei to msg.sender, not to recipient
+        // send remaining wei to msg.sender, not to contributor
         if(msg.value > weiPayment) {
             msg.sender.transfer(msg.value.sub(weiPayment));
         }

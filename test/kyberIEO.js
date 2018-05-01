@@ -13,7 +13,6 @@ let someUser;
 let rateNumerator = 17;
 let rateDenominator = 39;
 let contributionWallet;
-let IEOId = '0x1234';
 let dayInSecs = 24 * 60 * 60;
 let kyberIEO;
 let IEORateInst;
@@ -30,12 +29,14 @@ let distributedTokensTwei = 0;
 let contributorPayedWeiSoFar = 0;
 let contributorTokenTweiBalance = 0;
 let contributionWalletStartBalance;
+
 //signed contributor value
 let v = '0x1b';
 let r = '0x737c9fb533be22ea2f400a2b9388ff28a1489fb76f5e852e7c20fec63da7b039';
 let s = '0x07e08845abf71a4d6538e6c91d27b6b1d4b5af8d7be1a8e0c683b03fd0448e8d';
 let contributor = '0x3ee48c714fb8adc5376716c69121009bc13f3045';
-
+let signer = '0xcefff360d0576e3e63fd5e75fdedcf14875b184a';
+let IEOId = '0x1234';
 
 contract('KyberIEO', function(accounts) {
     it("Init all values. test getters", async function () {
@@ -52,6 +53,13 @@ contract('KyberIEO', function(accounts) {
         contributionWalletStartBalance = await Helper.getBalancePromise(contributionWallet);
 
         operator = accounts[3];
+
+        if (signer != operator) {
+            console.log("for testing this script testrpc must be started with known menomincs so keys are well known.")
+            console.log("If keys are not known can't use existing signatures that verify user.");
+            console.log("please run test rpc using bash script './runTestRpc' in root folder of this project.")
+            assert(false);
+        }
         someUser = accounts[4];
         alerter = accounts[5];
 
@@ -66,6 +74,7 @@ contract('KyberIEO', function(accounts) {
         //api: admin, _contributionWallet, _token, _contributorCapWei, _IEOId,  _cappedIEOTime, _openIEOTime, _endIEOTime
         kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
         await kyberIEO.addOperator(operator);
+        await kyberIEO.addAlerter(alerter);
 
         //send tokens to KyberIEO
         await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf()) ;
@@ -126,8 +135,10 @@ contract('KyberIEO', function(accounts) {
         let contributorStartWeiBalance = await Helper.getBalancePromise(contributor);
 
         let result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue.valueOf(), from: contributor});
-
         assert.equal(result.logs[0].args.distributedTokensTwei.valueOf(), expectedTokenQty.valueOf())
+        assert.equal(result.logs[0].args.payedWei.valueOf(), expectedWeiPayment.valueOf())
+        assert.equal(result.logs[0].args.contributor, contributor);
+//        console.log(result.logs[0].args)
 
         let expectedTokenQtyThisTrade = (new BigNumber(expectedWeiPayment)).multipliedBy(rateNumerator).div(rateDenominator).toFixed(0);
         contributorTokenTweiBalance += expectedTokenQtyThisTrade * 1;
@@ -186,6 +197,63 @@ contract('KyberIEO', function(accounts) {
         assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
     });
 
+    it("test contribution resulting in 0 tokens is reverted.", async function () {
+        let weiValue = 1;
+        let expectedTokenQty = (new BigNumber(weiValue)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedTokenQty = expectedTokenQty.minus(expectedTokenQty.mod(1));
+        assert.equal(expectedTokenQty.valueOf(), 0);
+
+        try {
+            await kyberIEO.contribute(contributor, v, r, s, {value: weiValue.valueOf(), from: contributor});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        // see success with same parameters and higher wei value
+        weiValue = 20;
+        expectedTokenQty = (new BigNumber(weiValue)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedTokenQty = expectedTokenQty.minus(expectedTokenQty.mod(1));
+        assert(expectedTokenQty.valueOf() > 0);
+        await kyberIEO.contribute(contributor, v, r, s, {value: weiValue.valueOf(), from: contributor});
+    });
+
+    it("test halt IEO, resume IEO can be done only by alerter / admin.", async function () {
+        let rxIEOHalted = await kyberIEO.haltedIEO();
+        assert.equal(rxIEOHalted.valueOf(), false);
+
+        try {
+            await kyberIEO.haltIEO({from: admin});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        rxIEOHalted = await kyberIEO.haltedIEO();
+        assert.equal(rxIEOHalted.valueOf(), false);
+
+        await kyberIEO.haltIEO({from: alerter});
+
+        rxIEOHalted = await kyberIEO.haltedIEO();
+        assert.equal(rxIEOHalted.valueOf(), true);
+
+        try {
+            await kyberIEO.resumeIEO({from: alerter});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        rxIEOHalted = await kyberIEO.haltedIEO();
+        assert.equal(rxIEOHalted.valueOf(), true);
+
+        await kyberIEO.resumeIEO({from: admin});
+
+        rxIEOHalted = await kyberIEO.haltedIEO();
+        assert.equal(rxIEOHalted.valueOf(), false);
+    });
+
+
     it("test get contributor remaining cap in IEO stages + contribute per stage.", async function () {
         let now = await web3.eth.getBlock('latest').timestamp;
 
@@ -198,6 +266,7 @@ contract('KyberIEO', function(accounts) {
 
         kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
         await kyberIEO.addOperator(operator);
+        await kyberIEO.addAlerter(alerter);
 
         kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
         await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
@@ -241,7 +310,7 @@ contract('KyberIEO', function(accounts) {
         }
     });
 
-    it("test get contributor remaining cap in IEO stages + contribute per stage.", async function () {
+    it("test contribution and halt IEO / result IEO API.", async function () {
         let now = await web3.eth.getBlock('latest').timestamp;
 
         cappedStartTime = now;
@@ -276,9 +345,10 @@ contract('KyberIEO', function(accounts) {
         assert.equal(rxQuantity.valueOf(), expectedTokenQty.valueOf());
 
         // halt IEO and see can't contribute
-        await kyberIEO.haltIEO({from: alerter});
+        result = await kyberIEO.haltIEO({from: alerter});
+        assert.equal(result.logs[0].args.sender, alerter);
 
-        // see trade reverted when sale halted
+        // see trade reverted when IEO halted
         try {
             await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
             assert(false, "throw was expected in line above.")
@@ -287,7 +357,8 @@ contract('KyberIEO', function(accounts) {
         }
 
         // resume IEO and see can contribute
-        await kyberIEO.resumeIEO({from: admin});
+        result = await kyberIEO.resumeIEO({from: admin});
+        assert.equal(result.logs[0].args.sender, admin);
 
         result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
 
@@ -296,5 +367,21 @@ contract('KyberIEO', function(accounts) {
         expectedTokenQty = expectedTokenQty.plus(additionalTokenQty);
         rxQuantity = await token.balanceOf(contributor);
         assert.equal(rxQuantity.valueOf(), expectedTokenQty.valueOf());
+    });
+
+    it("test contribution wallet and debug buy.", async function () {
+        let weiValue = 10000;
+
+        let walletAddress = await kyberIEO.contributionWallet();
+        assert.equal(walletAddress, contributionWallet);
+
+        let walletStartBalanceWei = new BigNumber(await Helper.getBalancePromise(contributionWallet));
+
+        let debugBuyWei = 123;
+        await kyberIEO.debugBuy({value: debugBuyWei});
+
+        let walletBalanceWei = await Helper.getBalancePromise(contributionWallet);
+
+        assert.equal(walletBalanceWei.valueOf(), walletStartBalanceWei.plus(debugBuyWei).valueOf());
     });
 });

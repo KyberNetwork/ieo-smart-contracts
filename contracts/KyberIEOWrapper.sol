@@ -55,7 +55,6 @@ contract KyberIEOWrapper is Withdrawable {
         return contribute(data);
     }
 
-
     function contribute(ContributeData data) internal returns(bool) {
         uint weiCap = data.kyberIEO.getContributorRemainingCap(msg.sender);
         if (data.maxDestAmountWei < weiCap) weiCap = data.maxDestAmountWei;

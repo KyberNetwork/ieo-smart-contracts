@@ -404,7 +404,6 @@ contract('KyberIEO', function(accounts) {
             assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
         }
 
-
         // see reverted when wallet addresss 0
         try {
             kyberIEO = await KyberIEO.new(admin, 0, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
@@ -414,7 +413,7 @@ contract('KyberIEO', function(accounts) {
         }
     });
 
-    it("verify contribute reverted when rate is 0 for.", async function () {
+    it("verify contribute reverted when rate is 0.", async function () {
         let weiValue = 30;
         let now = await web3.eth.getBlock('latest').timestamp;
 
@@ -427,6 +426,9 @@ contract('KyberIEO', function(accounts) {
 
         kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
         await kyberIEO.addOperator(operator);
+
+        kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
 
         //contribute before setting rate
         try {
@@ -442,8 +444,8 @@ contract('KyberIEO', function(accounts) {
         await IEORateInst.addOperator(operator);
         await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
 
-//        result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
-//        assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue)
+        result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+        assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue)
 
         //now set rate with zero partial
 //        await IEORateInst.setRateEthToToken(0, rateDenominator, {from: operator});

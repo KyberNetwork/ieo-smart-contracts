@@ -1,9 +1,9 @@
-let TestToken = artifacts.require("./mockContracts/TestToken.sol");
-let KyberIEO = artifacts.require("./KyberIEO.sol");
-let IEORate = artifacts.require("./IEORate.sol");
+const TestToken = artifacts.require("./mockContracts/TestToken.sol");
+const KyberIEO = artifacts.require("./KyberIEO.sol");
+const IEORate = artifacts.require("./IEORate.sol");
 
-let Helper = require("./helper.js");
-let BigNumber = require('bignumber.js');
+const Helper = require("./helper.js");
+const BigNumber = require('bignumber.js');
 
 let token;
 let admin;
@@ -31,11 +31,11 @@ let contributorTokenTweiBalance = 0;
 let contributionWalletStartBalance;
 
 //signed contributor value
-let v = '0x1b';
-let r = '0x737c9fb533be22ea2f400a2b9388ff28a1489fb76f5e852e7c20fec63da7b039';
-let s = '0x07e08845abf71a4d6538e6c91d27b6b1d4b5af8d7be1a8e0c683b03fd0448e8d';
-let contributor = '0x3ee48c714fb8adc5376716c69121009bc13f3045';
-let signer = '0xcefff360d0576e3e63fd5e75fdedcf14875b184a';
+const v = '0x1b';
+const r = '0x737c9fb533be22ea2f400a2b9388ff28a1489fb76f5e852e7c20fec63da7b039';
+const s = '0x07e08845abf71a4d6538e6c91d27b6b1d4b5af8d7be1a8e0c683b03fd0448e8d';
+const contributor = '0x3ee48c714fb8adc5376716c69121009bc13f3045';
+const signer = '0xcefff360d0576e3e63fd5e75fdedcf14875b184a';
 let IEOId = '0x1234';
 
 contract('KyberIEO', function(accounts) {
@@ -53,7 +53,6 @@ contract('KyberIEO', function(accounts) {
         contributionWalletStartBalance = await Helper.getBalancePromise(contributionWallet);
 
         operator = accounts[3];
-
         if (signer != operator) {
             console.log("for testing this script testrpc must be started with known menomincs so keys are well known.")
             console.log("If keys are not known can't use existing signatures that verify user.");
@@ -448,25 +447,36 @@ contract('KyberIEO', function(accounts) {
         assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue)
 
         //now set rate with zero partial
-//        await IEORateInst.setRateEthToToken(0, rateDenominator, {from: operator});
-//        try {
-//            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
-//            assert(false, "throw was expected in line above.")
-//        } catch(e){
-//            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
-//        }
-//
-//        await IEORateInst.setRateEthToToken(rateNumerator, 0, {from: operator});
-//        try {
-//            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
-//            assert(false, "throw was expected in line above.")
-//        } catch(e){
-//            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
-//        }
-//
-//        await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
-//
-//        result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
-//        assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue)
+        await IEORateInst.setRateEthToToken(0, rateDenominator, {from: operator});
+        try {
+            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        await IEORateInst.setRateEthToToken(rateNumerator, 0, {from: operator});
+        try {
+            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
+
+        result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+        assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue)
+    });
+
+    it("verify contribute reverted when wei payment is 0.", async function () {
+        let weiValue = 0;
+
+        try {
+            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
     });
 });

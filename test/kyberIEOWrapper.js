@@ -1,12 +1,11 @@
-let TestToken = artifacts.require("./mockContracts/TestToken.sol");
-let KyberIEO = artifacts.require("./KyberIEO.sol");
-let KyberIEOWrapper = artifacts.require("./KyberIEOWrapper.sol");
-let MockKyberNetwork = artifacts.require("./MockKyberNetwork.sol");
-let IEORate = artifacts.require("./IEORate.sol");
+const TestToken = artifacts.require("./mockContracts/TestToken.sol");
+const KyberIEO = artifacts.require("./KyberIEO.sol");
+const KyberIEOWrapper = artifacts.require("./KyberIEOWrapper.sol");
+const MockKyberNetwork = artifacts.require("./MockKyberNetwork.sol");
+const IEORate = artifacts.require("./IEORate.sol");
 
-
-let Helper = require("./helper.js");
-let BigNumber = require('bignumber.js');
+const Helper = require("./helper.js");
+const BigNumber = require('bignumber.js');
 
 let IEOToken;
 let otherToken;
@@ -36,11 +35,12 @@ let ratePrecision = (new BigNumber(10)).pow(18);
 let approveValueInfinite = (new BigNumber(2)).pow(255);
 
 //signed contributor value
-let v = '0x1b';
-let r = '0x737c9fb533be22ea2f400a2b9388ff28a1489fb76f5e852e7c20fec63da7b039';
-let s = '0x07e08845abf71a4d6538e6c91d27b6b1d4b5af8d7be1a8e0c683b03fd0448e8d';
-let contributor = '0x3ee48c714fb8adc5376716c69121009bc13f3045';
-
+const v = '0x1b';
+const r = '0x737c9fb533be22ea2f400a2b9388ff28a1489fb76f5e852e7c20fec63da7b039';
+const s = '0x07e08845abf71a4d6538e6c91d27b6b1d4b5af8d7be1a8e0c683b03fd0448e8d';
+const contributor = '0x3ee48c714fb8adc5376716c69121009bc13f3045';
+const signer = '0xcefff360d0576e3e63fd5e75fdedcf14875b184a';
+let IEOId = '0x1234';
 
 contract('KyberIEOWrapper', function(accounts) {
     it("Init network and test it.", async function () {
@@ -56,6 +56,13 @@ contract('KyberIEOWrapper', function(accounts) {
         contributionWallet = '0x1c67a930777215c9d4c617511c229e55fa53d0f8';
 
         operator = accounts[3];
+        if (signer != operator) {
+            console.log("for testing this script testrpc must be started with known menomincs so keys are well known.")
+            console.log("If keys are not known can't use existing signatures that verify user.");
+            console.log("please run test rpc using bash script './runTestRpc' in root folder of this project.")
+            assert(false);
+        }
+
         someUser = accounts[4];
 
         otherToken = await TestToken.new('other token', 'other', otherTokenDecimals);

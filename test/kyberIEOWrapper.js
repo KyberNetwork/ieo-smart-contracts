@@ -18,7 +18,6 @@ let someUser;
 let rateNumerator = 43;
 let rateDenominator = 17;
 let contributionWallet;
-let IEOId = '0x1234';
 let dayInSecs = 24 * 60 * 60;
 let kyberIEO;
 let kyberIEOWrapper;

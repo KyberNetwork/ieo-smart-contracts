@@ -252,7 +252,6 @@ contract('KyberIEO', function(accounts) {
         assert.equal(rxIEOHalted.valueOf(), false);
     });
 
-
     it("test get contributor remaining cap in IEO stages + contribute per stage.", async function () {
         let now = await web3.eth.getBlock('latest').timestamp;
 
@@ -287,7 +286,7 @@ contract('KyberIEO', function(accounts) {
         let rxQuantity = await token.balanceOf(contributor);
         assert.equal(rxQuantity.valueOf(), expectedTokenQty.valueOf());
 
-        cap = await kyberIEO.getContributorRemainingCap(contributor);;
+        cap = await kyberIEO.getContributorRemainingCap(contributor);
         assert.equal(cap.valueOf(), capWei.minus(weiValue).valueOf(), "cap should be as user cap now");
 
         await Helper.sendPromise('evm_increaseTime', [(dayInSecs + 1 * 50)]);
@@ -441,28 +440,6 @@ contract('KyberIEO', function(accounts) {
         IEORateAddress = await kyberIEO.IEORateContract();
         let IEORateInst = await IEORate.at(IEORateAddress);
         await IEORateInst.addOperator(operator);
-        await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
-
-        result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
-        assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue)
-
-        //now set rate with zero partial
-        await IEORateInst.setRateEthToToken(0, rateDenominator, {from: operator});
-        try {
-            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
-            assert(false, "throw was expected in line above.")
-        } catch(e){
-            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
-        }
-
-        await IEORateInst.setRateEthToToken(rateNumerator, 0, {from: operator});
-        try {
-            result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});
-            assert(false, "throw was expected in line above.")
-        } catch(e){
-            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
-        }
-
         await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
 
         result = await kyberIEO.contribute(contributor, v, r, s, {value: weiValue, from: contributor});

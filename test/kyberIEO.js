@@ -163,7 +163,7 @@ contract('KyberIEO', function(accounts) {
 
         //see trade reverted if not open stage
         try {
-            await await kyberIEO.contribute(contributor, v, r, s, {value: weiValue.valueOf(), from: contributor});
+            await kyberIEO.contribute(contributor, v, r, s, {value: weiValue.valueOf(), from: contributor});
             assert(false, "throw was expected in line above.")
         } catch(e){
             assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
@@ -253,18 +253,20 @@ contract('KyberIEO', function(accounts) {
     });
 
     it("test get contributor remaining cap in IEO stages + contribute per stage.", async function () {
-        let now = await web3.eth.getBlock('latest').timestamp;
-
-        cappedStartTime = now;
-        openStartTime = now * 1 + dayInSecs * 1;
-        endTime = now * 1 + dayInSecs * 2;
-
         tokenDecimals = 18;
         token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
+
+        let now = await web3.eth.getBlock('latest').timestamp;
+        cappedStartTime = now + 1;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
 
         kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
         await kyberIEO.addOperator(operator);
         await kyberIEO.addAlerter(alerter);
+
+        await Helper.sendPromise('evm_increaseTime', [2]);
+        await Helper.sendPromise('evm_mine', []);
 
         kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
         await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
@@ -311,16 +313,19 @@ contract('KyberIEO', function(accounts) {
     it("test contribution while calling halt IEO and resume IEO API.", async function () {
         let now = await web3.eth.getBlock('latest').timestamp;
 
-        cappedStartTime = now;
-        openStartTime = now * 1 + dayInSecs * 1;
-        endTime = now * 1 + dayInSecs * 2;
-
         tokenDecimals = 18;
         token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
+
+        cappedStartTime = now + 1;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
 
         kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
         await kyberIEO.addOperator(operator);
         await kyberIEO.addAlerter(alerter);
+
+        await Helper.sendPromise('evm_increaseTime', [2]);
+        await Helper.sendPromise('evm_mine', []);
 
         kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
         await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
@@ -412,18 +417,21 @@ contract('KyberIEO', function(accounts) {
     });
 
     it("verify contribute reverted when rate is 0.", async function () {
-        let weiValue = 30;
-        let now = await web3.eth.getBlock('latest').timestamp;
-
-        cappedStartTime = now;
-        openStartTime = now * 1 + dayInSecs * 1;
-        endTime = now * 1 + dayInSecs * 2;
-
         tokenDecimals = 18;
         token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
 
+        let weiValue = 30;
+        let now = await web3.eth.getBlock('latest').timestamp;
+
+        cappedStartTime = now + 1;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
+
         kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
         await kyberIEO.addOperator(operator);
+
+        await Helper.sendPromise('evm_increaseTime', [2]);
+        await Helper.sendPromise('evm_mine', []);
 
         kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
         await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
@@ -436,7 +444,7 @@ contract('KyberIEO', function(accounts) {
             assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
         }
 
-        //set rate and see success
+//        set rate and see success
         IEORateAddress = await kyberIEO.IEORateContract();
         let IEORateInst = await IEORate.at(IEORateAddress);
         await IEORateInst.addOperator(operator);

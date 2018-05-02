@@ -10,7 +10,7 @@ import "./zeppelin/SafeMath.sol";
 //          First phase is capped IEO where each contributor can contribute up to capped amount.
 //          Second phase will be open for unlimited contributions that are blocked only by amount of tokens.
 contract CapManager is Withdrawable {
-    mapping(address=>uint) public participatedWei;
+    mapping(uint=>uint) public participatedWei;
     uint public contributorCapWei;
     uint internal IEOId; //uinque ID will be part of hash
     uint constant public MAX_PURCHASE_WEI = uint(-1);
@@ -47,20 +47,20 @@ contract CapManager is Withdrawable {
     //      If contributor already participated. when IEO in capped stage, will return contributor cap less previous
     //        participation. if open contribute stage will return max cap.
     //        notice the participation amount will still be blocked by token balance of this contract.
-    function getContributorRemainingCap(address contributor) public view returns(uint capWei) {
+    function getContributorRemainingCap(uint userId) public view returns(uint capWei) {
         if (!IEOStarted()) return 0;
         if (IEOEnded()) return 0;
 
         if (openIEOStarted()) {
             capWei = MAX_PURCHASE_WEI;
         } else {
-            if (participatedWei[contributor] >= contributorCapWei) capWei = 0;
-            else capWei = contributorCapWei.sub(participatedWei[contributor]);
+            if (participatedWei[userId] >= contributorCapWei) capWei = 0;
+            else capWei = contributorCapWei.sub(participatedWei[userId]);
         }
     }
 
-    function eligible(address contributor, uint amountWei) public view returns(uint) {
-        uint remainingCap = getContributorRemainingCap(contributor);
+    function eligible(uint userID, uint amountWei) public view returns(uint) {
+        uint remainingCap = getContributorRemainingCap(userID);
         if (amountWei > remainingCap) return remainingCap;
         return amountWei;
     }
@@ -83,8 +83,8 @@ contract CapManager is Withdrawable {
         return (now >= endIEOTime); // solium-disable-line security/no-block-members
     }
 
-    function validateContributor(address contributor, uint8 v, bytes32 r, bytes32 s) public view returns(bool) {
-        require(verifySignature(keccak256(contributor, IEOId), v, r, s));
+    function validateContributor(address contributor, uint userId, uint8 v, bytes32 r, bytes32 s) public view returns(bool) {
+        require(verifySignature(keccak256(contributor, userId, IEOId), v, r, s));
         return true;
     }
 
@@ -92,10 +92,10 @@ contract CapManager is Withdrawable {
         return IEOId;
     }
 
-    function eligibleCheckAndIncrement(address contributor, uint amountInWei) internal returns(uint)
+    function eligibleCheckAndIncrement(uint userId, uint amountInWei) internal returns(uint)
     {
-        uint result = eligible(contributor, amountInWei);
-        participatedWei[contributor] = participatedWei[contributor].add(result);
+        uint result = eligible(userId, amountInWei);
+        participatedWei[userId] = participatedWei[userId].add(result);
 
         return result;
     }

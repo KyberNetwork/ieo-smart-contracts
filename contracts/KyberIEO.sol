@@ -47,8 +47,8 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         emit IEOResumed(msg.sender);
     }
 
-    event Contribution(address contributor, uint distributedTokensTwei, uint payedWei);
-    function contribute(address contributor, uint8 v, bytes32 r, bytes32 s) external payable returns(bool) {
+    event Contribution(address msgSender, address contributor, uint userId, uint distributedTokensTwei, uint payedWei);
+    function contribute(address contributor, uint userId, uint8 v, bytes32 r, bytes32 s) external payable returns(bool) {
         require(!haltedIEO);
         require(IEOStarted());
         require(!IEOEnded());
@@ -58,9 +58,9 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         (rateNumerator, rateDenominator) = IEORateContract.getRate();
         require(rateNumerator > 0);
         require(rateDenominator > 0);
-        require(validateContributor(contributor, v, r, s));
+        require(validateContributor(contributor, userId, v, r, s));
 
-        uint weiPayment = eligibleCheckAndIncrement(contributor, msg.value);
+        uint weiPayment = eligibleCheckAndIncrement(userId, msg.value);
         require(weiPayment > 0);
 
         uint tokenQty = weiPayment.mul(rateNumerator).div(rateDenominator);
@@ -79,7 +79,7 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         require(token.transfer(contributor, tokenQty));
         distributedTokensTwei = distributedTokensTwei.add(tokenQty);
 
-        emit Contribution(contributor, tokenQty, weiPayment);
+        emit Contribution(msg.sender, contributor, userId, tokenQty, weiPayment);
 
         return true;
     }

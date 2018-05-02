@@ -30,6 +30,7 @@ contract KyberIEOWrapper is Withdrawable {
     function() public payable {}
 
     struct ContributeData {
+        uint userId;
         ERC20 token;
         uint amountTwei;
         uint minConversionRate;
@@ -41,8 +42,9 @@ contract KyberIEOWrapper is Withdrawable {
         bytes32 s;
     }
 
-    event ContributionByToken(address contributor, ERC20 token, uint amountSentTwei, uint tradedWei, uint changeTwei);
+    event ContributionByToken(address contributor, uint userId, ERC20 token, uint amountSentTwei, uint tradedWei, uint changeTwei);
     function contributeWithToken(
+        uint userId,
         ERC20 token,
         uint amountTwei,
         uint minConversionRate,
@@ -53,13 +55,13 @@ contract KyberIEOWrapper is Withdrawable {
         bytes32 r,
         bytes32 s) external returns(bool)
     {
-        ContributeData memory data = ContributeData(token, amountTwei, minConversionRate, maxDestAmountWei, network,
+        ContributeData memory data = ContributeData(userId, token, amountTwei, minConversionRate, maxDestAmountWei, network,
             kyberIEO, v, r, s);
         return contribute(data);
     }
 
     function contribute(ContributeData data) internal returns(bool) {
-        uint weiCap = data.kyberIEO.getContributorRemainingCap(msg.sender);
+        uint weiCap = data.kyberIEO.getContributorRemainingCap(data.userId);
         if (data.maxDestAmountWei < weiCap) weiCap = data.maxDestAmountWei;
         require(weiCap > 0);
 
@@ -72,7 +74,7 @@ contract KyberIEOWrapper is Withdrawable {
             data.minConversionRate, this);
 
         //emit event here where we still have valid "change" value
-        emit ContributionByToken(msg.sender, data.token, data.amountTwei, amountWei, data.token.balanceOf(this));
+        emit ContributionByToken(msg.sender, data.userId, data.token, data.amountTwei, amountWei, data.token.balanceOf(this));
 
         if (data.token.balanceOf(this) > initialTokenBalance) {
             //if not all tokens were taken by network approve value is not zereod.
@@ -81,7 +83,7 @@ contract KyberIEOWrapper is Withdrawable {
             data.token.transfer(msg.sender, (data.token.balanceOf(this).sub(initialTokenBalance)));
         }
 
-        require(data.kyberIEO.contribute.value(amountWei)(msg.sender, data.v, data.r, data.s));
+        require(data.kyberIEO.contribute.value(amountWei)(msg.sender, data.userId, data.v, data.r, data.s));
         return true;
     }
 }

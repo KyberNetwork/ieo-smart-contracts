@@ -34,34 +34,80 @@ let ratePrecision = (new BigNumber(10)).pow(18);
 let approveValueInfinite = (new BigNumber(2)).pow(255);
 
 //signed contributor value
-const contributor = '0x3ee48c714fb8adc5376716c69121009bc13f3045';
-const signer = '0xcefff360d0576e3e63fd5e75fdedcf14875b184a';
+let signer = Helper.getSignerAddress();
 let IEOId = '0x1234';
 
-let user1ID = '0x123456789987654321abcd';
-let address1User1 = '0x3ee48c714fb8adc5376716c69121009bc13f3045';
-let vU1Add1 = '0x1c';
-let rU1Add1 = '0x2988ba3469625f4f5d7f87dae97a684fe358e3ea5aa3952393567b9a40e4d753';
-let sU1Add1 = '0x45ec523c7f284644813f5ae5c60062fad80ad56333c4302d2977930f2ef1515c';
+//user1
+let user1ID;
+let address1User1;
+let vU1Add1;
+let rU1Add1;
+let sU1Add1;
 
-let address2User1 = '0xcb5595ce20f39c8a8afd103211c68284f931a1fb';
-let vU1Add2 = '0x1c';
-let rU1Add2 = '0xfbec16d1066734d49cf996e135f3fd4696b089c2ceb623eb3df0a815d3f2159e';
-let sU1Add2 = '0x6123364c7fa99ad47953646f415b3f15c85cc97b3802372464ec497cb34b5d56';
+let address2User1;
+let vU1Add2;
+let rU1Add2;
+let sU1Add2;
 
-let address3User1 = '0x24007facc58575d23f0341dc91b41b849cd8259d';
-let vU1Add3 = '0x1b';
-let rU1Add3 = ' 0x23788068b1c43ff028419a11b2590c5d20ae1702e8ffdd67394baed57ce99acc';
-let sU1Add3 = ' 0x409b6cfac56c379eb7818b720f61b57a3562887c4d8f5ee6d3e82386830f21fe';
+let address3User1;
+let vU1Add3;
+let rU1Add3;
+let sU1Add3;
 
 //user 2
-let user2ID = '0x744456789987654321abcd';
-let address1User2 = '0x005feb7254ddccfa8b4a4a4a365d13a2a5866075';
-let vU2Add1 = '0x1c';
-let rU2Add1 = '0x6f87e26ca09e0da6e054156a58d95ad3d92b425ecc2afe28595d087e7bdc44d7';
-let sU2Add1 = '0x4991747c9f68fa92456b37b3642158cd20f3cf1d1939689a5337657193ab6b08';
+let user2ID;
+let address1User2;
+let vU2Add1;
+let rU2Add1;
+let sU2Add1;
+
+//user3
+let user3ID;
+let address1User3;
+let vU3Add1;
+let rU3Add1;
+let sU3Add1;
 
 contract('KyberIEOWrapper', function(accounts) {
+    it("Init signatures", async function () {
+      let sig;
+      user1ID = '0x123456789987654321abcd';
+      address1User1 = accounts[1];
+      sig = Helper.getContributionSignature(address1User1,user1ID,IEOId);
+      vU1Add1 = sig.v;
+      rU1Add1 = sig.r;
+      sU1Add1 = sig.s;
+
+      address2User1 = accounts[7];
+      sig = Helper.getContributionSignature(address2User1,user1ID,IEOId);
+      vU1Add2 = sig.v;
+      rU1Add2 = sig.r;
+      sU1Add2 = sig.s;
+
+      address3User1 = accounts[8];
+      sig = Helper.getContributionSignature(address3User1,user1ID,IEOId);
+      vU1Add3 = sig.v;
+      rU1Add3 = sig.r;
+      sU1Add3 = sig.s;
+
+      //user 2
+      user2ID = '0x744456789987654321abcd';
+      address1User2 = accounts[9];
+      sig = Helper.getContributionSignature(address1User2,user2ID,IEOId);
+      vU2Add1 = sig.v;
+      rU2Add1 = sig.r;
+      sU2Add1 = sig.s;
+
+      //user3
+      user3ID = '0x744456789983217654321abcd';
+      address1User3 = accounts[6];
+      sig = Helper.getContributionSignature(address1User3,user3ID,IEOId);
+      vU3Add1 = sig.v;
+      rU3Add1 = sig.r;
+      sU3Add1 = sig.s;
+    });
+
+
     it("Init network and test it.", async function () {
         admin = accounts[0];
 
@@ -75,12 +121,6 @@ contract('KyberIEOWrapper', function(accounts) {
         contributionWallet = '0x1c67a930777215c9d4c617511c229e55fa53d0f8';
 
         operator = accounts[3];
-        if (signer != operator) {
-            console.log("for testing this script testrpc must be started with known menomincs so keys are well known.")
-            console.log("If keys are not known can't use existing signatures that verify user.");
-            console.log("please run test rpc using bash script './runTestRpc' in root folder of this project.")
-            assert(false);
-        }
 
         someUser = accounts[4];
 
@@ -136,7 +176,7 @@ contract('KyberIEOWrapper', function(accounts) {
         endTime = now * 1 + dayInSecs * 3;
         //api: admin, _contributionWallet, _token, _contributorCapWei, _IEOId,  _cappedIEOTime, _openIEOTime, _endIEOTime
         kyberIEO = await KyberIEO.new(admin, contributionWallet, IEOToken.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
-        await kyberIEO.addOperator(operator);
+        await kyberIEO.addOperator(signer);
 
         kyberIEOWrapper = await KyberIEOWrapper.new(admin);
 
@@ -275,4 +315,3 @@ contract('KyberIEOWrapper', function(accounts) {
     });
 
 });
-

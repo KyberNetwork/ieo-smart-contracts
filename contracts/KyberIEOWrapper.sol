@@ -75,7 +75,7 @@ contract KyberIEOWrapper is Withdrawable {
             //if not all tokens were taken by network approve value is not zereod.
             // must zero it so next time will not revert.
             data.token.approve(address(data.network), 0);
-            data.token.transfer(msg.sender, data.token.balanceOf(this));
+            data.token.transfer(msg.sender, (data.token.balanceOf(this) - initialTokenBalance));
         }
 
         require(data.kyberIEO.contribute.value(amountWei)(msg.sender, data.v, data.r, data.s));

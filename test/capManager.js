@@ -33,9 +33,7 @@ contract('CapManager', function(accounts) {
          }
 
         someUser = accounts[2];
-
         operator = accounts[3];
-
         if (signer != operator) {
             console.log("for testing this script testrpc must be started with known menomincs so keys are well known.")
             console.log("If keys are not known can't use existing signatures that verify user.");
@@ -43,6 +41,7 @@ contract('CapManager', function(accounts) {
             assert(false);
         }
 
+        await Helper.sendPromise('evm_mine', []);
         let now = await web3.eth.getBlock('latest').timestamp;
 //        console.log("now " + now);
 
@@ -252,10 +251,13 @@ contract('CapManager', function(accounts) {
     it("verify set cap enabled only for admin.", async function () {
         let now = await web3.eth.getBlock('latest').timestamp;
 
-        cappedStartTime = now;
+        cappedStartTime = now + 1;
         openStartTime = now * 1 + dayInSecs * 1;
         endTime = now * 1 + dayInSecs * 2;
         capManager = await CapManager.new(cappedStartTime, openStartTime, endTime, capWei.valueOf(), IEOId, admin);
+
+        await Helper.sendPromise('evm_increaseTime', [2]);
+        await Helper.sendPromise('evm_mine', []);
 
         let newCapWei = capWei.plus(300);
         await capManager.setContributorCap(newCapWei.valueOf());
@@ -278,7 +280,7 @@ contract('CapManager', function(accounts) {
         let now = await web3.eth.getBlock('latest').timestamp;
 
         //one succesful deploy
-        cappedStartTime = now;
+        cappedStartTime = now + 1;
         openStartTime = now + 9 * 1;
         endTime = now * 1 + dayInSecs * 2;
         capManager = await CapManager.new(cappedStartTime, openStartTime, endTime, capWei.valueOf(), IEOId, admin);
@@ -304,7 +306,6 @@ contract('CapManager', function(accounts) {
         } catch(e){
             assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
         }
-
 
         //revert when IEO End < IEO start
         cappedStartTime = now ;

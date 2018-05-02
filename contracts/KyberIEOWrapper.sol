@@ -4,6 +4,7 @@ pragma solidity ^0.4.23;
 import "./ERC20Interface.sol";
 import "./Withdrawable.sol";
 import "./KyberIEOInterface.sol";
+import "./zeppelin/SafeMath.sol";
 
 
 interface KyberNetwork {
@@ -21,6 +22,8 @@ interface KyberNetwork {
 contract KyberIEOWrapper is Withdrawable {
 
     ERC20 constant internal ETH_TOKEN_ADDRESS = ERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
+
+    using SafeMath for uint;
 
     constructor(address _admin) public Withdrawable(_admin) {}
 
@@ -75,7 +78,7 @@ contract KyberIEOWrapper is Withdrawable {
             //if not all tokens were taken by network approve value is not zereod.
             // must zero it so next time will not revert.
             data.token.approve(address(data.network), 0);
-            data.token.transfer(msg.sender, (data.token.balanceOf(this) - initialTokenBalance));
+            data.token.transfer(msg.sender, (data.token.balanceOf(this).sub(initialTokenBalance)));
         }
 
         require(data.kyberIEO.contribute.value(amountWei)(msg.sender, data.v, data.r, data.s));

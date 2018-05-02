@@ -12,7 +12,7 @@ let IEORateInst;
 let rateNumerator = 18;
 let rateDenominator = 37;
 
-contract('KyberIEO', function(accounts) {
+contract('IEORate', function(accounts) {
     it("Init contract, set rate, test event", async function () {
         admin = accounts[0];
         operator = accounts[1];
@@ -62,6 +62,51 @@ contract('KyberIEO', function(accounts) {
         rate = await IEORateInst.getRate();
         assert.equal(rate[0].valueOf(), rateNumerator2);
         assert.equal(rate[1].valueOf(), rateDenominator2);
+    });
+
+    it("test set rate reverted on zero rate", async function () {
+        let rateNumerator2 = 33;
+        let rateDenominator2 = 77;
+
+        result = await IEORateInst.setRateEthToToken(rateNumerator2, rateDenominator2, {from: operator});
+        //verify rate has changed
+        rate = await IEORateInst.getRate();
+        assert.equal(rate[0].valueOf(), rateNumerator2);
+        assert.equal(rate[1].valueOf(), rateDenominator2);
+
+        let rateNumerator3 = 15;
+        let rateDenominator3 = 99;
+
+        try {
+            let result = await IEORateInst.setRateEthToToken(0, rateDenominator3, {from: operator});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //verify rate hasn't changed
+        rate = await IEORateInst.getRate();
+        assert.equal(rate[0].valueOf(), rateNumerator2);
+        assert.equal(rate[1].valueOf(), rateDenominator2);
+
+        try {
+            let result = await IEORateInst.setRateEthToToken(rateNumerator3, 0, {from: operator});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //verify rate hasn't changed
+        rate = await IEORateInst.getRate();
+        assert.equal(rate[0].valueOf(), rateNumerator2);
+        assert.equal(rate[1].valueOf(), rateDenominator2);
+
+        result = await IEORateInst.setRateEthToToken(rateNumerator3, rateDenominator3, {from: operator});
+
+        //verify rate has changed
+        rate = await IEORateInst.getRate();
+        assert.equal(rate[0].valueOf(), rateNumerator3);
+        assert.equal(rate[1].valueOf(), rateDenominator3);
     });
 
 });

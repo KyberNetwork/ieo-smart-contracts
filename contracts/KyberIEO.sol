@@ -47,7 +47,7 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         emit IEOResumed(msg.sender);
     }
 
-    event Contribution(address contributor, uint userId, uint distributedTokensTwei, uint payedWei);
+    event Contribution(address msgSender, address contributor, uint userId, uint distributedTokensTwei, uint payedWei);
     function contribute(address contributor, uint userId, uint8 v, bytes32 r, bytes32 s) external payable returns(bool) {
         require(!haltedIEO);
         require(IEOStarted());
@@ -79,7 +79,7 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         require(token.transfer(contributor, tokenQty));
         distributedTokensTwei = distributedTokensTwei.add(tokenQty);
 
-        emit Contribution(contributor, userId, tokenQty, weiPayment);
+        emit Contribution(msg.sender, contributor, userId, tokenQty, weiPayment);
 
         return true;
     }

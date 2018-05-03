@@ -29,7 +29,7 @@ contract CapManager is Withdrawable {
         Withdrawable(_admin)
         public
     {
-        require(_cappedIEOTime >= now);
+        require(_cappedIEOTime >= now); // solium-disable-line security/no-block-members
         require(_cappedIEOTime <= _openIEOTime);
         require(_openIEOTime <= _endIEOTime);
         require(_IEOId != 0);

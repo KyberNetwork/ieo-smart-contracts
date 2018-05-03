@@ -42,7 +42,9 @@ contract KyberIEOWrapper is Withdrawable {
         bytes32 s;
     }
 
-    event ContributionByToken(address contributor, uint userId, ERC20 token, uint amountSentTwei, uint tradedWei, uint changeTwei);
+    event ContributionByToken(address contributor, uint userId, ERC20 token, uint amountSentTwei, uint tradedWei,
+    uint changeTwei);
+
     function contributeWithToken(
         uint userId,
         ERC20 token,
@@ -83,7 +85,13 @@ contract KyberIEOWrapper is Withdrawable {
             data.minConversionRate, this);
 
         //emit event here where we still have valid "change" value
-        emit ContributionByToken(msg.sender, data.userId, data.token, data.amountTwei, amountWei, data.token.balanceOf(this));
+        emit ContributionByToken(
+            msg.sender,
+            data.userId,
+            data.token,
+            data.amountTwei,
+            amountWei,
+            (data.token.balanceOf(this).sub(initialTokenBalance))); // solium-disable-line indentation
 
         if (data.token.balanceOf(this) > initialTokenBalance) {
             //if not all tokens were taken by network approve value is not zereod.

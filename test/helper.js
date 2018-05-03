@@ -1,4 +1,7 @@
+var secp256k1 = require("secp256k1")
+var ethUtils = require("ethereumjs-util")
 
+const privateKey = "0x" + ethUtils.keccak256("real men use go to sign (and not javascript)").toString('hex');
 
 module.exports.isRevertErrorMessage = function( error ) {
     if( error.message.search('invalid opcode') >= 0 ) return true;
@@ -72,3 +75,41 @@ module.exports.sendPromise = function(method, params) {
         });
     });
 };
+
+
+
+function privateKeyToAddress(key) {
+  const privateKey = ethUtils.toBuffer(key);
+  const pubKey = ethUtils.privateToPublic(privateKey);
+  return "0x" + ethUtils.publicToAddress(pubKey).toString('hex');
+}
+
+function ecsign (msgHash, privateKey) {
+  const sig = secp256k1.sign(msgHash, ethUtils.toBuffer(privateKey))
+
+  const ret = {}
+  ret.r = "0x" + ethUtils.setLength(sig.signature.slice(0, 32),32).toString('hex')
+  ret.s = "0x" + ethUtils.setLength(sig.signature.slice(32, 64),32).toString('hex')
+  ret.v = "0x" + ethUtils.toBuffer(sig.recovery + 27).toString('hex')
+  return ret
+}
+
+function getContributionSig(privateKey,contributor,userId,ieoId) {
+
+  const contributorBuffer = ethUtils.setLength(ethUtils.toBuffer(contributor),20);
+  const IEOIdBuffer = ethUtils.setLength(ethUtils.toBuffer(ieoId),32);
+  const userIdBuffer = ethUtils.setLength(ethUtils.toBuffer(userId),32);
+  const message = Buffer.concat([contributorBuffer,userIdBuffer,IEOIdBuffer]);
+  const msgHash = ethUtils.keccak256(message);
+
+  const ret = ecsign(msgHash,privateKey);
+  return ret;
+}
+
+module.exports.getSignerAddress = function() {
+  return privateKeyToAddress(privateKey);
+}
+
+module.exports.getContributionSignature = function(contributor,userId,ieoId) {
+  return getContributionSig(privateKey,contributor,userId,ieoId);
+}

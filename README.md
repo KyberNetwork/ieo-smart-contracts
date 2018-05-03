@@ -78,5 +78,9 @@ However, in initial token sale is a process that by definition require certain d
 
 Another potential issue is potnentially giving privilage to a server (hot wallet) to set rates, or invalid rates set by fat finger.
 For this purpose, projects who wish to eliminate this option, could set operator to an invalid address no one controls.
-# Testrpc commandline
-strpc -m "love is the greatest thing giggle shrivvle chase bicycle render exhaust check"
+# Deployment script
+See `deployment_script` directory.
+For regression test run:
+1. `npm install`
+2. `testrpc`
+3. `./node_modules/.bin/truffle test`

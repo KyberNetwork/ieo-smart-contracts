@@ -23,7 +23,7 @@ let endTime;
 let capWei = (new BigNumber(10)).pow(18).div(2); //0.5 ether
 let maxCapWei = ((new BigNumber(2)).pow(256)).minus(1);
 let tokenDecimals = 7;
-let kyberIEONumTokenTwei = (new BigNumber(10)).pow((tokenDecimals * 1 + 12 * 1));
+let kyberIEOInitialTokenTwei = (new BigNumber(10)).pow((tokenDecimals * 1 + 12 * 1));
 let raisedWei = 0;
 let distributedTokensTwei = 0;
 let contributorPayedWeiSoFar = 0;
@@ -138,7 +138,7 @@ contract('KyberIEO', function(accounts) {
         await kyberIEO.addAlerter(alerter);
 
         //send tokens to KyberIEO
-        await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf()) ;
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf()) ;
 //        let kyberIEOTokensTwei = await token.balanceOf(kyberIEO.address);
 //        console.log('kyberIEOTokensTwei')
 //        console.log(kyberIEOTokensTwei)
@@ -315,6 +315,186 @@ contract('KyberIEO', function(accounts) {
         assert.equal(rxIEOHalted.valueOf(), false);
     });
 
+    it("test contribution reverted before start time.", async function () {
+        tokenDecimals = 18;
+        token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
+
+        let now = await web3.eth.getBlock('latest').timestamp;
+        cappedStartTime = now + 100 * 1;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
+
+        kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
+        await kyberIEO.addOperator(signer);
+        await kyberIEO.addAlerter(alerter);
+
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
+
+        IEORateAddress = await kyberIEO.IEORateContract();
+        let IEORateInst = await IEORate.at(IEORateAddress);
+        await IEORateInst.addOperator(operator);
+        await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
+
+        cap = await kyberIEO.getContributorRemainingCap(user1ID);
+        assert.equal(cap.valueOf(), 0, "cap should be 0 before start");
+
+        //contribute and see reverted - not started yet.
+        let weiValue = 1000;
+        try {
+            let result = await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //move to IEO start time. see success
+        await Helper.sendPromise('evm_increaseTime', [101]);
+        await Helper.sendPromise('evm_mine', []);
+
+        cap = await kyberIEO.getContributorRemainingCap(user1ID);
+        assert.equal(cap.valueOf(), capWei.valueOf(), "cap should be as user cap now");
+
+        //contribute and see reverted - not started yet.
+        await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+    });
+
+    it("test contribution reverted for illegal signature - replacing different signed values", async function () {
+        tokenDecimals = 18;
+        token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
+
+        let now = await web3.eth.getBlock('latest').timestamp;
+        cappedStartTime = now + 100 * 1;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
+
+        kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
+        await kyberIEO.addOperator(signer);
+        await kyberIEO.addAlerter(alerter);
+
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
+
+        IEORateAddress = await kyberIEO.IEORateContract();
+        let IEORateInst = await IEORate.at(IEORateAddress);
+        await IEORateInst.addOperator(operator);
+        await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
+
+        //move to IEO start time.
+        await Helper.sendPromise('evm_increaseTime', [101]);
+        await Helper.sendPromise('evm_mine', []);
+
+        cap = await kyberIEO.getContributorRemainingCap(user1ID);
+        assert.equal(cap.valueOf(), capWei.valueOf(), "cap should be as user cap now");
+
+        //contribute and see reverted - wrong user address.
+        let weiValue = 1000;
+        try {
+            let result = await kyberIEO.contribute(admin, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //contribute and see reverted - wrong user ID.
+        try {
+            let result = await kyberIEO.contribute(address1User1, user2ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //contribute and see reverted - wrong v.
+        try {
+            let result = await kyberIEO.contribute(address1User1, user1ID, '0x15', rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+
+        //contribute and see reverted - wrong r.
+        try {
+            let result = await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add2, sU1Add1, {value: weiValue, from: address1User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //contribute and see reverted - wrong ss.
+        try {
+            let result = await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add3, {value: weiValue, from: address1User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+
+        cap = await kyberIEO.getContributorRemainingCap(user1ID);
+        assert.equal(cap.valueOf(), capWei.valueOf(), "cap should be as user cap now");
+
+        //contribute and see success.
+        await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+    });
+
+    it("test contribution reverted when out of tokens in KyberIEO", async function () {
+        tokenDecimals = 18;
+        token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
+
+        let now = await web3.eth.getBlock('latest').timestamp;
+        cappedStartTime = now + 100 * 1;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
+
+        kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
+        await kyberIEO.addOperator(signer);
+        await kyberIEO.addAlerter(alerter);
+
+        kyberIEOInitialTokenTwei = 5000;
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
+
+        IEORateAddress = await kyberIEO.IEORateContract();
+        let IEORateInst = await IEORate.at(IEORateAddress);
+        await IEORateInst.addOperator(operator);
+        //set 1 : 1 rate
+        await IEORateInst.setRateEthToToken(1, 1, {from: operator});
+
+        //move to IEO start time.
+        await Helper.sendPromise('evm_increaseTime', [101]);
+        await Helper.sendPromise('evm_mine', []);
+
+        cap = await kyberIEO.getContributorRemainingCap(user1ID);
+        assert.equal(cap.valueOf(), capWei.valueOf(), "cap should be as user cap now");
+
+        //contribute and see success - wrong user address.
+        let weiValue = 4000;
+        let expecteTwei = weiValue; // ratio 1 : 1
+        let result = await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+
+        let balance = await token.balanceOf(address1User1);
+        assert.equal(balance.valueOf(), expecteTwei);
+
+        cap = await kyberIEO.getContributorRemainingCap(user1ID);
+        assert.equal(cap.valueOf(), (capWei.minus(weiValue)).valueOf(), "cap should be as user cap now");
+
+        let kyberIEOBalance = await token.balanceOf(kyberIEO.address);
+        assert.equal(kyberIEOBalance.valueOf(), kyberIEOInitialTokenTwei - expecteTwei);
+
+        //contribute and see reverted - not enough tokens.
+        let weiValueAboveTokenBalance = 2000;
+        try {
+            let result = await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1,
+                {value: weiValueAboveTokenBalance, from: address1User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //see balance not changed
+        balance = await token.balanceOf(address1User1);
+        assert.equal(balance.valueOf(), weiValue);
+    });
+
     it("test get contributor remaining cap in IEO stages + contribute per stage.", async function () {
         tokenDecimals = 18;
         token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
@@ -331,8 +511,8 @@ contract('KyberIEO', function(accounts) {
         await Helper.sendPromise('evm_increaseTime', [101]);
         await Helper.sendPromise('evm_mine', []);
 
-        kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
-        await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
 
         IEORateAddress = await kyberIEO.IEORateContract();
         let IEORateInst = await IEORate.at(IEORateAddress);
@@ -373,6 +553,7 @@ contract('KyberIEO', function(accounts) {
         }
     });
 
+
     it("test contribution while calling halt IEO and resume IEO API.", async function () {
         tokenDecimals = 18;
         token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
@@ -390,8 +571,8 @@ contract('KyberIEO', function(accounts) {
         await Helper.sendPromise('evm_increaseTime', [101]);
         await Helper.sendPromise('evm_mine', []);
 
-        kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
-        await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
 
         IEORateAddress = await kyberIEO.IEORateContract();
         let IEORateInst = await IEORate.at(IEORateAddress);
@@ -451,8 +632,8 @@ contract('KyberIEO', function(accounts) {
         await Helper.sendPromise('evm_increaseTime', [101]);
         await Helper.sendPromise('evm_mine', []);
 
-        kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
-        await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
 
         IEORateAddress = await kyberIEO.IEORateContract();
         let IEORateInst = await IEORate.at(IEORateAddress);
@@ -520,8 +701,8 @@ contract('KyberIEO', function(accounts) {
         cap = await kyberIEO.getContributorRemainingCap(user1ID);
         assert.equal(cap.valueOf(), maxCapWei.valueOf(), "cap should be max cap");
 
-        kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
-        await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
 
         cap = await kyberIEO.getContributorRemainingCap(user1ID);
         assert.equal(cap.valueOf(), maxCapWei.valueOf(), "cap should be max cap");
@@ -574,8 +755,8 @@ contract('KyberIEO', function(accounts) {
         await Helper.sendPromise('evm_increaseTime', [101]);
         await Helper.sendPromise('evm_mine', []);
 
-        kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
-        await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
 
         cap = await kyberIEO.getContributorRemainingCap(user1ID);
         assert.equal(cap.valueOf(), capWei.valueOf(), "cap should be as user cap now");
@@ -646,8 +827,8 @@ contract('KyberIEO', function(accounts) {
         await IEORateInst.addOperator(operator);
         await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
 
-        kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
-        await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
 
         //move to IEO start time
         await Helper.sendPromise('evm_increaseTime', [101]);
@@ -768,8 +949,8 @@ contract('KyberIEO', function(accounts) {
         await Helper.sendPromise('evm_increaseTime', [101]);
         await Helper.sendPromise('evm_mine', []);
 
-        kyberIEONumTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
-        await token.transfer(kyberIEO.address, kyberIEONumTokenTwei.valueOf());
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 6);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
 
         //contribute before setting rate
         try {

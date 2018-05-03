@@ -110,18 +110,8 @@ contract('KyberIEOWrapper', function(accounts) {
 
     it("Init network and test it.", async function () {
         admin = accounts[0];
-
-        if (address1User1 != accounts[1]) {
-            console.log("for testing this script testrpc must be run with known menomincs so keys are known in advance")
-            console.log("If keys are not known can't use existing signatures that verify user.");
-            console.log("please run test rpc using bash script './runTestRpc' in root folder of this project.")
-            assert(false);
-        }
-
         contributionWallet = '0x1c67a930777215c9d4c617511c229e55fa53d0f8';
-
         operator = accounts[3];
-
         someUser = accounts[4];
 
         otherToken = await TestToken.new('other token', 'other', otherTokenDecimals);
@@ -153,18 +143,6 @@ contract('KyberIEOWrapper', function(accounts) {
     });
 
     it("Init all contracts. test getters", async function () {
-
-        if (address1User1 != accounts[1]) {
-            console.log("for testing this script testrpc must be run with known menomincs so keys are known in advance")
-            console.log("If keys are not known can't use existing signatures that verify user.");
-            console.log("please run test rpc using bash script './runTestRpc' in root folder of this project.")
-            assert(false);
-        }
-
-        contributionWallet = '0x1c67a930777215c9d4c617511c229e55fa53d0f8';
-
-        operator = accounts[3];
-        someUser = accounts[4];
 
         IEOToken = await TestToken.new("IEO Token", "IEO", tokenDecimals);
 
@@ -314,4 +292,83 @@ contract('KyberIEOWrapper', function(accounts) {
         assert.equal(rxQuantity.valueOf(), expectedIEOQty.valueOf());
     });
 
+    it("test trade without enough approved tokens to wrapper is reverted.", async function () {
+        openIEOStarted = await kyberIEO.openIEOStarted();
+        assert.equal(openIEOStarted, true, "open IEO started should be true now");
+        assert.equal((await kyberIEO.IEOEnded()), false, "IEO ended should be false now");
+
+
+        //api: token, amountTwei, minConversionRate, network, kyberIEO, vU1Add1, rU1Add1, sU1Add1
+        let tradeTwei = 1500;
+        let maxAmountWei = 100000;
+        let expectedEtherPayment = (new BigNumber(tradeTwei)).multipliedBy(otherTokenRate).div(ratePrecision);
+        expectedEtherPayment = expectedEtherPayment.minus(expectedEtherPayment.mod(1));
+
+        let contributorInitialTweiIEO = await IEOToken.balanceOf(address2User1);
+
+        //approve
+        let approveTweiAmount = 2000;
+        await otherToken.transfer(address2User1, 5000);
+        await otherToken.approve(kyberIEOWrapper.address, approveTweiAmount, {from: address2User1});
+
+        let result = await kyberIEOWrapper.contributeWithToken(user1ID, otherToken.address, tradeTwei, 0, maxAmountWei,
+                        network.address, kyberIEO.address, vU1Add2, rU1Add2, sU1Add2, {from: address2User1});
+
+//        console.log(result.logs[0].args)
+        assert.equal(result.logs[0].args.tradedWei.valueOf(), expectedEtherPayment);
+        assert.equal(result.logs[0].args.changeTwei.valueOf(), 0);
+
+        //calculate IEO token amount
+        let expectedIEOTokenTradedQty = (new BigNumber(expectedEtherPayment)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedIEOTokenTradedQty = expectedIEOTokenTradedQty.minus(expectedIEOTokenTradedQty.mod(1));
+        let expectedIEOQty = expectedIEOTokenTradedQty.plus(contributorInitialTweiIEO);
+        let rxQuantity = await IEOToken.balanceOf(address2User1);
+        assert.equal(rxQuantity.valueOf(), expectedIEOTokenTradedQty.valueOf());
+
+
+        //now same contribute should revert
+        try {
+            await kyberIEOWrapper.contributeWithToken(user1ID, otherToken.address, tradeTwei, 0, maxAmountWei,
+                            network.address, kyberIEO.address, vU1Add2, rU1Add2, sU1Add2, {from: address2User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //see values didn't change
+        rxQuantity = await IEOToken.balanceOf(address2User1);
+        assert.equal(rxQuantity.valueOf(), expectedIEOTokenTradedQty.valueOf());
+    });
+
+    it("test trade with bad signature is reverted.", async function () {
+        openIEOStarted = await kyberIEO.openIEOStarted();
+        assert.equal(openIEOStarted, true, "open IEO started should be true now");
+        assert.equal((await kyberIEO.IEOEnded()), false, "IEO ended should be false now");
+
+
+        //api: token, amountTwei, minConversionRate, network, kyberIEO, vU1Add1, rU1Add1, sU1Add1
+        let tradeTwei = 1500;
+        let maxAmountWei = 100000;
+        let expectedEtherPayment = (new BigNumber(tradeTwei)).multipliedBy(otherTokenRate).div(ratePrecision);
+        expectedEtherPayment = expectedEtherPayment.minus(expectedEtherPayment.mod(1));
+
+        let contributorInitialTweiIEO = await IEOToken.balanceOf(address2User1);
+
+        //approve
+        let approveTweiAmount = 2000;
+        await otherToken.transfer(address2User1, 5000);
+        await otherToken.approve(kyberIEOWrapper.address, approveTweiAmount, {from: address2User1});
+
+        //now contribute should revert - use wrong user ID
+        try {
+            await kyberIEOWrapper.contributeWithToken(user2ID, otherToken.address, tradeTwei, 0, maxAmountWei,
+                            network.address, kyberIEO.address, vU1Add2, rU1Add2, sU1Add2, {from: address2User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+//
+        let rxQuantity = await IEOToken.balanceOf(address2User1);
+        assert.equal(rxQuantity.valueOf(), contributorInitialTweiIEO.valueOf());
+    });
 });

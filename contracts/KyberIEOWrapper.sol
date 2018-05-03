@@ -55,8 +55,17 @@ contract KyberIEOWrapper is Withdrawable {
         bytes32 r,
         bytes32 s) external returns(bool)
     {
-        ContributeData memory data = ContributeData(userId, token, amountTwei, minConversionRate, maxDestAmountWei, network,
-            kyberIEO, v, r, s);
+        ContributeData memory data = ContributeData(
+            userId,
+            token,
+            amountTwei,
+            minConversionRate,
+            maxDestAmountWei,
+            network,
+            kyberIEO,
+            v,
+            r,
+            s);
         return contribute(data);
     }
 

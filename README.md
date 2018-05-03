@@ -4,14 +4,14 @@ and give an overview over the smart contracts structure.
 
 ## Informal Specification
 An initial exchange offering (IEO) is very similar to initial coin offering (ICO), however,
-as oppose to standard token generation event (TGE, aka ICO), the tokens are generated before the IEO, and portion of them is transfered to the IEO token(contract? ID), where user can exchange (buy) them in return to Ether.
-It should be noted that in parallel these tokens could also be offered for sale ('exchange') in other venues or platforms. In addition ('remove "in addition"), allocation for specific individuals and entities like advisors or pre-sale contributors is not done in the scope of the IEO.
+as oppose to standard token generation event (TGE, aka ICO), the tokens are generated before the IEO, and portion of them is transfered to the IEO contract, where user can exchange (buy) them in return to Ether.
+It should be noted that in parallel these tokens could also be offered for sale (exchange) in other venues or platforms. Allocation for specific individuals and entities like advisors or pre-sale contributors is not done in the scope of the IEO.
 
-The IEO is open only to('for') registered users.
-The list of registered users is not visible to the contract. Instead a dedicated server (that holds a dedicated private key) signs special data to prove to the contract the user was registered.
+The IEO is open only for registered users.
+The list of registered users is not visible to the contract. Instead a dedicated server (that holds a dedicated private key) signs special data to prove to the contract the user has done the registeration process.
 
-The sale('exchange') takes place in two stages.
-In the first stage, user ETH contribution is limited by a global ('per user') cap.
+The IEO process takes place in two stages.
+In the first stage, user ETH contribution is limited by a global per user cap.
 In the second stage, (registered) users can make any size of contribution, until token supply is depleted.
 It should be noted that the first or the second stage could be of 0 time. I.e., it is possible to execute a sell('exchange') that has only stage one or only stage two.
 
@@ -30,9 +30,9 @@ Denote by T the start time of the IEO.
 1. On T - 1 month, users can register in kyber.network website.
 
 1. On T - 5 days, we deploy `KyberIEO.sol` and ask the token project to transfer tokens to that contract.
-Two special addresses are set. The first is the `kyberIEO` operator which signs user messages to prove they registered. The second one is the `IEORate` operator which can set token to ETH conversion rate at any time (if the rate is suppose to be fix along the IEO, the operator can be set to a dummy adddress).
+Two special addresses are set. The first is the `kyberIEO` operator which signs user messages to prove they registered. The second one is the `IEORate` operator which can set token to ETH conversion rate at any time (if the rate is supposed to be fixed along the IEO, the operator can be set to a dummy adddress).
 
-2. On T, the sale starts. At this point users can buy tokens according to the global('per user') cap.
+2. On T, the sale starts. At this point users can buy tokens according to the global per user cap.
 It is possible to buy several times, as long as cap is not exceeded.
 In order to participate in the sale they have to log-in into our website. A dedicated server will sign their contribution address, IEO id, and a user id, and will transmit their contribution transaction to the contract.
 
@@ -51,8 +51,9 @@ In addition, it deploys `IEORate.sol` contract which can set the conversion rate
 Three accounts play special role in this contract, namely, admin, operator and alerter (optional).
 The admin account in controlled by a cold wallet (or a multisig) and can extract tokens from the contract. In addition it can assign operators and alerters.
 The operator can sign registered user contribution. It will typically be in a hot wallet (server), though it need not hold any funds.
-The alerter can only halt the IEO process in case it detects something wrong. ('multiple operators can be defined').
+The alerter can only halt the IEO process in case it detects something wrong. 
 In this case, only the admin account can resume the IEO.
+Multiple alerters and operators can be defined.
 
 #### Rate
 Implemented in `IEORate.sol`.

@@ -18,6 +18,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
 const solc = require('solc')
 
 const rand = web3.utils.randomHex(7);
+let privateKey = web3.utils.sha3("truffle sucks" + rand);
 if (printPrivateKey) {
   console.log("privateKey", privateKey);
   let path = "privatekey_"  + web3.utils.randomHex(7) + ".txt";
@@ -48,6 +49,9 @@ async function sendTx(txObject) {
   let gasLimit;
   try {
     gasLimit = await txObject.estimateGas();
+    if(gasLimit < 30000) {
+      gasLimit = 500 * 1000;
+    }
   }
   catch (e) {
     gasLimit = 500 * 1000;
@@ -128,6 +132,7 @@ let publicSaleEndTime;
 
 let rateOperator;
 let kycOperator;
+let alerter;
 
 let initialRateN = BigNumber(7);
 let initialRateD = BigNumber(8);
@@ -152,6 +157,7 @@ function parseInput( jsonInput ) {
     const operatorParams = jsonInput["operators"]
     rateOperator = operatorParams["rate"];
     kycOperator = operatorParams["kyc"];
+    alerter = operatorParams["alerter"];
 
     // initial rate
     const initialRateParams = jsonInput["initialRate"];
@@ -207,9 +213,14 @@ async function main() {
   let rateContract = await new web3.eth.Contract(JSON.parse(rateAbi), rateContractAddress);
 
   console.log("IEO");
+  // add alerter
+  console.log("Add alerter");
+  await sendTx(IEOContract.methods.addAlerter(alerter));
+
   // add kyc operator
   console.log("Add kyc operator");
   await sendTx(IEOContract.methods.addOperator(kycOperator));
+  // add alerter
   // transfer admin
   console.log("transfer admin");
   await sendTx(IEOContract.methods.transferAdminQuickly(admin));

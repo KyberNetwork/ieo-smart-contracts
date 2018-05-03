@@ -362,6 +362,7 @@ contract('CapManager', function(accounts) {
         }
 
         //revert when open IEO start < IEO Start
+        now = await web3.eth.getBlock('latest').timestamp;
         cappedStartTime = now + 10 * 1;
         openStartTime = now + 9 * 1;
         endTime = now * 1 + dayInSecs * 2;
@@ -372,8 +373,9 @@ contract('CapManager', function(accounts) {
             assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
         }
 
-        //revert when IEO End < IEO start
-        cappedStartTime = now ;
+        //revert when IEO End < IEO open
+        now = await web3.eth.getBlock('latest').timestamp;
+        cappedStartTime = now + 15 * 1;
         openStartTime = now * 1 + dayInSecs * 1;
         endTime = openStartTime - 1;
         try {
@@ -384,8 +386,8 @@ contract('CapManager', function(accounts) {
         }
 
         //revert when IEO ID is 0
-        cappedStartTime = now ;
-        openStartTime = now * 1 + dayInSecs * 1;
+        now = await web3.eth.getBlock('latest').timestamp;
+        cappedStartTime = now + 15 * 1;
         endTime = now * 1 + dayInSecs * 2;
         IEOId = 0;
 

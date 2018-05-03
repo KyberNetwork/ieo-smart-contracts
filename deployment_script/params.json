@@ -11,7 +11,8 @@
   },
   "operators" : {
     "kyc" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb2",
-    "rate" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb1"
+    "rate" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb1",
+    "alerter" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb3"
   },
   "initialRate" : {
     "numerator" : "1234",

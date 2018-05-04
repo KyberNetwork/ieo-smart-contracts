@@ -17,5 +17,6 @@
   "initialRate" : {
     "numerator" : "1234",
     "denominator" : "234454"
-  }
+  },
+  "output filename": "deployOutput.json"
 }

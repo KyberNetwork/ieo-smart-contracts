@@ -55,19 +55,18 @@ async function sendTx(txObject) {
   try {
     gasLimit = await txObject.estimateGas();
     if(gasLimit < 30000) {
-      gasLimit = 400 * 1000;
+      gasLimit = 500 * 1000;
     }
   }
   catch (e) {
-    gasLimit = 400 * 1000;
+    gasLimit = 500 * 1000;
   }
 
   if(txTo !== null) {
-    gasLimit = 400 * 1000;
+    gasLimit = 500 * 1000;
   }
 
-  console.log(gasLimit);
-  console.log(gasLimit);
+//  console.log(gasLimit);
   const txData = txObject.encodeABI();
   const txFrom = account.address;
   const txKey = account.privateKey;
@@ -95,7 +94,7 @@ async function deployContract(solcOutput, contractName, ctorArgs) {
 
   const actualName = contractName;
   const bytecode = solcOutput.contracts[actualName].bytecode;
-  console.log("XXX");
+//  console.log("XXX");
   console.log(bytecode.length);
 
   const abi = solcOutput.contracts[actualName].interface;
@@ -233,13 +232,13 @@ async function main() {
   // set initial rate
   console.log("set rate");
   // add sender as temp operator
-  console.log("set sender as temp admin");
+  console.log("set sender as temp opereator");
   await sendTx(rateContract.methods.addOperator(sender));
   // set rate
   console.log("set rate setRateEthToToken");
   await sendTx(rateContract.methods.setRateEthToToken(initialRateN,initialRateD));
   // remove sender as temp admin
-  console.log("remove sender as temp admin");
+  console.log("remove sender as temp operator");
   await sendTx(rateContract.methods.removeOperator(sender));
   // add oeprator
   console.log("set operator");
@@ -284,8 +283,8 @@ try{
   content = fs.readFileSync(configPath, 'utf8');
   //console.log(content.substring(2892,2900));
   //console.log(content.substring(3490,3550));
-  jsonInput = JSON.parse(content
-  parseInput(jsonInput));
+  jsonInput = JSON.parse(content);
+  parseInput(jsonInput);
 }
 catch(err) {
   console.log(err);

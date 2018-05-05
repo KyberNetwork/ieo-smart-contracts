@@ -53,8 +53,8 @@ async function sendTx(txObject) {
   let gasLimit;
   try {
     gasLimit = await txObject.estimateGas();
-    if(gasLimit < 30000) {
-      gasLimit = 500 * 1000;
+     if(gasLimit < 30000) {
+        gasLimit = 500 * 1000;
     }
   }
   catch (e) {
@@ -65,7 +65,7 @@ async function sendTx(txObject) {
     gasLimit = 500 * 1000;
   }
 
-//  console.log(gasLimit);
+//  console.log(gasLimit)
   const txData = txObject.encodeABI();
   const txFrom = account.address;
   const txKey = account.privateKey;
@@ -93,7 +93,7 @@ async function deployContract(solcOutput, contractName, ctorArgs) {
 
   const actualName = contractName;
   const bytecode = solcOutput.contracts[actualName].bytecode;
-//  console.log("XXX");
+  console.log("XXX");
   console.log(bytecode.length);
 
   const abi = solcOutput.contracts[actualName].interface;
@@ -153,9 +153,9 @@ function parseInput( jsonInput ) {
     token = ctorParams["token"];
     contributorCapWei = new BigNumber(ctorParams["contributorCapWei"]);
     IEOId = new BigNumber(ctorParams["IEOId"]);
-    cappedSaleStart = dateToBigNumber(ctorParams["cappedSaleStart"]);
-    publicSaleStartTime = dateToBigNumber(ctorParams["publicSaleStartTime"]);
-    publicSaleEndTime = dateToBigNumber(ctorParams["publicSaleEndTime"]);
+    cappedIEOStart = dateToBigNumber(ctorParams["cappedIEOStart"]);
+    publicIEOStartTime = dateToBigNumber(ctorParams["publicIEOStartTime"]);
+    publicIEOEndTime = dateToBigNumber(ctorParams["publicIEOEndTime"]);
 
     // operators
     const operatorParams = jsonInput["operators"]
@@ -182,7 +182,6 @@ async function findImports (path) {
 async function main() {
   nonce = await web3.eth.getTransactionCount(sender);
   console.log("nonce",nonce);
-
   chainId = chainId || await web3.eth.net.getId()
   console.log('chainId', chainId);
 
@@ -204,9 +203,9 @@ async function main() {
                                                                                     token,
                                                                                     contributorCapWei,
                                                                                     IEOId,
-                                                                                    cappedSaleStart,
-                                                                                    publicSaleStartTime,
-                                                                                    publicSaleEndTime]);
+                                                                                    cappedIEOStart,
+                                                                                    publicIEOStartTime,
+                                                                                    publicIEOEndTime]);
 
   console.log("IEO address", IEOAddress);
   rateContractAddress = "0x" + web3.utils.sha3(RLP.encode([IEOAddress,1])).slice(12).substring(14);

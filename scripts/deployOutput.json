@@ -1,23 +1,23 @@
 {
-  "IEO Address":"0x65e2c5175e2e618f48e70343b14c31b280e42d90",
-  "IEO Rate Address":"0xff0cb0351a356ad16987e5809a8daaaf34f5adbe",
+  "IEO Address": "0x5197121dE65080953186ba8f1e6383F06cc1ef6E",
+  "IEO Rate Address": "0x8a2bdFD0Ed2E0fd7556836f0E7f45D4F793027F4",
   "constructor": {
-    "admin" : "0x65e2c5175e2e618f48e70343b14c31b280e42d90",
-    "projectWallet" : "0xff0cb0351a356ad16987e5809a8daaaf34f5adbe",
-    "token" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb0",
-    "contributorCapWei" : "12234454897348974",
-    "IEOId" : "1243322344",
-    "cappedIEOStart" : "Fri, 15 Sep 2017 06:00:00 GMT",
-    "publicIEOStartTime" : "Sat, 16 Sep 2018 06:00:00 GMT",
-    "publicIEOEndTime" : "Sun, 17 Sep 2018 06:00:00 GMT"
+    "admin": "0x65e2c5175e2e618f48e70343b14c31b280e42d90",
+    "projectWallet": "0xff0cb0351a356ad16987e5809a8daaaf34f5adbe",
+    "token": "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb0",
+    "contributorCapWei": "12234454897348974",
+    "IEOId": "1243322344",
+    "cappedSaleStart": "Fri, 15 Sep 2017 06:00:00 GMT",
+    "publicSaleStartTime": "Sat, 16 Sep 2018 06:00:00 GMT",
+    "publicSaleEndTime": "Sun, 17 Sep 2018 06:00:00 GMT"
   },
-  "operators" : {
-    "kyc" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb2",
-    "rate" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb1",
-    "alerter" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb3"
+  "operators": {
+    "kyc": "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb2",
+    "rate": "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb1",
+    "alerter": "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb3"
   },
-  "rate" : {
-    "numerator" : "1234",
-    "denominator" : "234454"
+  "rate": {
+    "numerator": "1234",
+    "denominator": "234454"
   }
 }

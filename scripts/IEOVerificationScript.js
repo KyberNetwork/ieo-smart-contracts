@@ -6,20 +6,37 @@ const path = require('path');
 const RLP = require('rlp');
 const BigNumber = require('bignumber.js');
 
+const mainnetUrls = ['https://mainnet.infura.io',
+                     'https://semi-node.kyber.network',
+                     'https://api.mycryptoapi.com/eth',
+                     'https://api.myetherapi.com/eth',
+                     'https://mew.giveth.io/'];
+
+const mainnetUrl = 'https://mainnet.infura.io';
+const kovanPublicNode = 'https://kovan.infura.io';
+const ropstenPublicNode = 'https://ropsten.infura.io';
+
+const localURL = 'http://localhost';
+
+let rpcUrl;
+
 process.on('unhandledRejection', console.error.bind(console));
 
-const {configPath, rpcUrl, chainId: chainIdInput } = require('yargs')
-    .usage('Usage: $0 --json-path [path] --rpc-url [url] --chain-id')
-    .demandOption(['jsonPath', 'rpcUrl'])
+const {inputPath, network} = require('yargs')
+    .usage('Usage: $0 --input-path [path] --network (m-mainnet, r-ropsten, k-kovan)')
+    .demandOption(['inputPath', 'network'])
     .argv;
 
-const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
 const solc = require('solc')
 
-let chainId = chainIdInput;
+// Copy & Paste this
+Date.prototype.getUnixTime = function() { return this.getTime()/1000|0 };
+if(!Date.now) Date.now = function() { return new Date(); }
+Date.time = function() { return Date.now().getUnixTime(); }
 
 //contract sources
 const contractPath = "../contracts/";
+
 
 const input = {
   "zeppelin/SafeMath.sol" : fs.readFileSync(contractPath + 'zeppelin/SafeMath.sol', 'utf8'),
@@ -55,29 +72,31 @@ let jsonAlerter;
 let jsonRateNumerator;
 let jsonRateDenominator;
 
+let outputLogString;
+let outputErrString;
+
 function dateToBigNumber(dateString) {
     return new BigNumber(new Date(dateString).getUnixTime());
 }
 
-function parseInput( jsonInput ) {
-    jsonIEOAddress =  jsonInput["IEO Address"].toLowerCase();
-    jsonIEORateAddress = jsonInput["IEO Rate Address"].toLowerCase();
+function parseInput(jsonInput) {
+    jsonIEOAddress = (jsonInput["IEO Address"]).toLowerCase();
+    jsonIEORateAddress = (jsonInput["IEO Rate Address"]).toLowerCase();
 
     const ctorParams = jsonInput["constructor"];
-    jsonAdmin = ctorParams["admin"].toLowerCase();
+    jsonAdmin = (ctorParams["admin"]).toLowerCase();
     jsonProjectWallet = ctorParams["projectWallet"];
-    sonToken = ctorParams["token"];
+    jsonToken = ctorParams["token"];
     jsonContributorCapWei = new BigNumber(ctorParams["contributorCapWei"]);
     jsonIEOId = new BigNumber(ctorParams["IEOId"]);
     jsonCappedIEOStart = dateToBigNumber(ctorParams["cappedIEOStart"]);
     jsonOpenIEOStartTime = dateToBigNumber(ctorParams["publicIEOStartTime"]);
     jsonPublicIEOEndTime = dateToBigNumber(ctorParams["publicIEOEndTime"]);
-
     // operators
     const operatorParams = jsonInput["operators"];
     jsonRateOperator = operatorParams["rate"].toLowerCase();
     jsonKycOperator = operatorParams["kyc"].toLowerCase();
-    jsonAalerter = operatorParams["alerter"].toLowerCase();
+    jsonAlerter = operatorParams["alerter"].toLowerCase();
 
     // rate
     const rateParams = jsonInput["rate"];
@@ -85,40 +104,62 @@ function parseInput( jsonInput ) {
     jsonRateDenominator = new BigNumber(rateParams["denominator"]);
 };
 
-
-async function findImports (path) {
-	if (path === 'zeppelin/SafeMath.sol') {
-        const safeMath = fs.readFileSync("../contracts/zeppelin/SafeMath.sol","utf8");
-        return { contents: safeMath }
-    }
-	else {
-		return { error: 'File not found' }
-    }
-}
+main();
 
 async function main() {
 
-    chainId = chainId || await web3.eth.net.getId()
-    console.log('chainId', chainId);
+    switch (network){
+        case 'm':
+            rpcUrl = mainnetUrl;
+            break;
+        case 'k':
+            rpcUrl = kovanPublicNode;
+            break;
+        case 'r':
+            rpcUrl = ropstenPublicNode;
+            break;
+        default: {
+            myLog(1, 0, "error: invalid network parameter, choose: m / r / k");
+        }
+    }
 
-    console.log("starting compilation");
+    const web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
+
+    myLog(0, 0, "parsing input")
+
+    try{
+        content = fs.readFileSync(inputPath, 'utf8');
+        //console.log(content.substring(2892,2900));
+        //console.log(content.substring(3490,3550));
+        jsonInput = JSON.parse(content);
+        parseInput(jsonInput);
+    }
+    catch(err) {
+        console.log(err);
+        process.exit(-1)
+    }
+
+    myLog(0, 0, "done parsing input")
+
+
+    myLog(0, 0, "starting compilation");
     const output = await solc.compile({ sources: input }, 1);
     console.log(output.errors);
     //console.log(output);
-    console.log("finished compilation");
+    myLog(0, 0, "finished compilation");
 
     //read kyber IEO
     ////////////////
-    let abi = solcOutput.contracts["KyberIEO.sol:KyberIEO"].interface;
-    IEOInst = await new web3.eth.Contract(JSON.parse(abi), IEOAddress);
+    let abi = output.contracts["KyberIEO.sol:KyberIEO"].interface;
+    IEOInst = await new web3.eth.Contract(JSON.parse(abi), jsonIEOAddress);
 
     //verify binary as expected.
-    let blockCode = await web3.eth.getCode(IEOAddress);
-    let solcCode = '0x' + (solcOutput.contracts["KyberIEO.sol:KyberIEO"].runtimeBytecode);
+    let blockCode = await web3.eth.getCode(jsonIEOAddress);
+    let solcCode = '0x' + (output.contracts["KyberIEO.sol:KyberIEO"].runtimeBytecode);
 
     myLog(0, 0, (""));
-    myLog(0, 0, ("KyberIEO: " + IEOAddress));
-    myLog(0, 0, ("------------------------------------------------------------"));
+    myLog(0, 0, ("KyberIEO: " + jsonIEOAddress));
+    myLog(0, 0, ("-----------------------------------------------------"));
 
     if (blockCode != solcCode){
 //        myLog(1, 0, "blockchain Code:");
@@ -141,14 +182,14 @@ async function main() {
     let contributorCapWei = (await IEOInst.methods.contributorCapWei().call()).toLowerCase();
     compareAndLog("contributorCapWei: " ,jsonContributorCapWei, contributorCapWei);
 
-    let IEOId = (await IEOInst.methods.IEOId().call()).toLowerCase();
+    let IEOId = (await IEOInst.methods.getIEOId().call()).toLowerCase();
     compareAndLog("IEOId: " ,jsonIEOId, IEOId);
 
     let cappedIEOStart = (await IEOInst.methods.cappedIEOStartTime().call()).toLowerCase();
     compareAndLog("cappedIEOStart time: ", jsonCappedIEOStart, cappedIEOStart);
 
     let openIEOStart = (await IEOInst.methods.openIEOStartTime().call()).toLowerCase();
-    compareAndLog("openIEOStartTime: ", jsonPublicIEOStartTime, openIEOStart);
+    compareAndLog("openIEOStartTime: ", jsonOpenIEOStartTime, openIEOStart);
 
     let endIEOTime = (await IEOInst.methods.endIEOTime().call()).toLowerCase();
     compareAndLog("endIEOTime: ", jsonPublicIEOEndTime, endIEOTime);
@@ -158,7 +199,7 @@ async function main() {
 
     let operators = (await IEOInst.methods.getOperators().call());
     for (let i = 0; i < operators.length; i++) {
-        compareAndLog("operator " + i + ": ", jsonKycOperator, oeprators[i].toLowerCase());
+        compareAndLog("operator " + i + ": ", jsonKycOperator, operators[i].toLowerCase());
     }
     
     let alerters = (await IEOInst.methods.getAlerters().call());
@@ -174,16 +215,16 @@ async function main() {
 
     //handle IEO Rate
     /////////////////
-    abi = solcOutput.contracts["IEORate.sol:IEORate"].interface;
+    abi = output.contracts["IEORate.sol:IEORate"].interface;
     IEORateInst = await new web3.eth.Contract(JSON.parse(abi), IEORateAddress);
 
     //verify binary as expected.
-    let blockCode = await web3.eth.getCode(IEORateAddress);
-    let solcCode = '0x' + (solcOutput.contracts["IEORate.sol:IEORate"].runtimeBytecode);
+    blockCode = await web3.eth.getCode(IEORateAddress);
+    solcCode = '0x' + (output.contracts["IEORate.sol:IEORate"].runtimeBytecode);
 
     myLog(0, 0, (""));
-    myLog(0, 0, ("KyberIEO: " + IEOAddress));
-    myLog(0, 0, ("------------------------------------------------------------"));
+    myLog(0, 0, ("rate contract: " + IEORateAddress));
+    myLog(0, 0, ("--------------------------------------------------------"));
 
     if (blockCode != solcCode){
 //        myLog(1, 0, "blockchain Code:");
@@ -209,28 +250,32 @@ async function main() {
 
     operators = (await IEORateInst.methods.getOperators().call());
     for (let i = 0; i < operators.length; i++) {
-        compareAndLog("operator " + i + ": ", jsonRateOperator, oeprators[i].toLowerCase());
+        compareAndLog("operator " + i + ": ", jsonRateOperator, operators[i].toLowerCase());
     }
 }
 
 
 function compareAndLog(string, jsonValue, rxValue) {
-    myLog((jsonValue != rxValue), 0, string + " as expected: " + (jsonValue != rxValue));
+    if (jsonValue != rxValue) {
+        myLog(1, 0, string + " json value: " + jsonValue + " not as received value: " + rxValue);
+    } else {
+        myLog(0, 0, string + rxValue + " as expected.");
+    }
 }
 
 function myLog(error, highlight, string) {
     if (error) {
 //        console.error(string);
         console.log('\x1b[31m%s\x1b[0m', string);
-        ouputErrString += "\nerror: " + string;
-        ouputLogString += "\nerror: " + string;
+        outputErrString += "\nerror: " + string;
+        outputLogString += "\nerror: " + string;
     } else if (highlight) {
         console.log('\x1b[33m%s\x1b[0m', string);
-        ouputErrString += "\nwarning: " + string;
+        outputErrString += "\nwarning: " + string;
         ouputLogString += "\nwarning: " + string;
     } else {
         console.log('\x1b[32m%s\x1b[0m', string);
-        ouputLogString += "\n     " + string;
+        outputLogString += "\n     " + string;
     }
 };
 

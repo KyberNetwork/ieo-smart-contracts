@@ -19,6 +19,7 @@ const solc = require('solc')
 
 const rand = web3.utils.randomHex(7);
 let privateKey = web3.utils.sha3("truffle sucks" + rand);
+
 if (printPrivateKey) {
   console.log("privateKey", privateKey);
   let path = "privatekey_"  + web3.utils.randomHex(7) + ".txt";
@@ -41,6 +42,9 @@ const signedTxs = [];
 let nonce;
 let chainId = chainIdInput;
 
+let IEOAddress;
+let rateContractAddress;
+
 console.log("from",sender);
 
 async function sendTx(txObject) {
@@ -49,8 +53,8 @@ async function sendTx(txObject) {
   let gasLimit;
   try {
     gasLimit = await txObject.estimateGas();
-    if(gasLimit < 30000) {
-      gasLimit = 500 * 1000;
+     if(gasLimit < 30000) {
+        gasLimit = 500 * 1000;
     }
   }
   catch (e) {
@@ -61,7 +65,7 @@ async function sendTx(txObject) {
     gasLimit = 500 * 1000;
   }
 
-  //console.log(gasLimit);
+//  console.log(gasLimit)
   const txData = txObject.encodeABI();
   const txFrom = account.address;
   const txKey = account.privateKey;
@@ -149,9 +153,9 @@ function parseInput( jsonInput ) {
     token = ctorParams["token"];
     contributorCapWei = new BigNumber(ctorParams["contributorCapWei"]);
     IEOId = new BigNumber(ctorParams["IEOId"]);
-    cappedSaleStart = dateToBigNumber(ctorParams["cappedSaleStart"]);
-    publicSaleStartTime = dateToBigNumber(ctorParams["publicSaleStartTime"]);
-    publicSaleEndTime = dateToBigNumber(ctorParams["publicSaleEndTime"]);
+    cappedIEOStart = dateToBigNumber(ctorParams["cappedIEOStart"]);
+    publicIEOStartTime = dateToBigNumber(ctorParams["publicIEOStartTime"]);
+    publicIEOEndTime = dateToBigNumber(ctorParams["publicIEOEndTime"]);
 
     // operators
     const operatorParams = jsonInput["operators"]
@@ -178,7 +182,6 @@ async function findImports (path) {
 async function main() {
   nonce = await web3.eth.getTransactionCount(sender);
   console.log("nonce",nonce);
-
   chainId = chainId || await web3.eth.net.getId()
   console.log('chainId', chainId);
 
@@ -194,19 +197,18 @@ async function main() {
 
 
   console.log("deploying IEO contract - set sender as admin");
-  let IEOAddress;
   let IEOContract;
   [IEOAddress,IEOContract] = await deployContract(output, "KyberIEO.sol:KyberIEO", [sender,
                                                                                     projectWallet,
                                                                                     token,
                                                                                     contributorCapWei,
                                                                                     IEOId,
-                                                                                    cappedSaleStart,
-                                                                                    publicSaleStartTime,
-                                                                                    publicSaleEndTime]);
+                                                                                    cappedIEOStart,
+                                                                                    publicIEOStartTime,
+                                                                                    publicIEOEndTime]);
 
   console.log("IEO address", IEOAddress);
-  let rateContractAddress = "0x" + web3.utils.sha3(RLP.encode([IEOAddress,1])).slice(12).substring(14);
+  rateContractAddress = "0x" + web3.utils.sha3(RLP.encode([IEOAddress,1])).slice(12).substring(14);
   rateContractAddress = web3.utils.toChecksumAddress(rateContractAddress);
   console.log("Rate address", rateContractAddress);
   let rateAbi = output.contracts["IEORate.sol:IEORate"].interface;
@@ -228,13 +230,13 @@ async function main() {
   // set initial rate
   console.log("set rate");
   // add sender as temp operator
-  console.log("set sender as temp admin");
+  console.log("set sender as temp opereator");
   await sendTx(rateContract.methods.addOperator(sender));
   // set rate
   console.log("set rate setRateEthToToken");
   await sendTx(rateContract.methods.setRateEthToToken(initialRateN,initialRateD));
   // remove sender as temp admin
-  console.log("remove sender as temp admin");
+  console.log("remove sender as temp operator");
   await sendTx(rateContract.methods.removeOperator(sender));
   // add oeprator
   console.log("set operator");
@@ -248,6 +250,8 @@ async function main() {
   if (signedTxOutput) {
     fs.writeFileSync(signedTxOutput, signedTxsJson);
   }
+
+  printParams(jsonInput);
 }
 
 function sleep(ms){
@@ -271,16 +275,32 @@ async function waitForEth() {
 
 let filename;
 let content;
+let jsonInput;
 
 try{
   content = fs.readFileSync(configPath, 'utf8');
   //console.log(content.substring(2892,2900));
   //console.log(content.substring(3490,3550));
-  parseInput(JSON.parse(content));
+  jsonInput = JSON.parse(content);
+  parseInput(jsonInput);
 }
 catch(err) {
   console.log(err);
   process.exit(-1)
+}
+
+function printParams(jsonInput) {
+    dictOutput = {};
+    dictOutput["IEO Address"] = IEOAddress;
+    dictOutput["IEO Rate Address"] = rateContractAddress;
+    dictOutput["constructor"] = jsonInput["constructor"];
+    dictOutput["operators"] = jsonInput["operators"];
+    dictOutput["rate"] = jsonInput["initialRate"];
+    const json = JSON.stringify(dictOutput, null, 2);
+    console.log(json);
+    const outputFileName = jsonInput["output filename"];
+    console.log(outputFileName, 'write');
+    fs.writeFileSync(outputFileName, json);
 }
 
 main();

@@ -5,9 +5,9 @@
     "token" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb0",
     "contributorCapWei" : "12234454897348974",
     "IEOId" : "1243322344",
-    "cappedSaleStart" : "Fri, 15 Sep 2017 06:00:00 GMT",
-    "publicSaleStartTime" : "Sat, 16 Sep 2018 06:00:00 GMT",
-    "publicSaleEndTime" : "Sun, 17 Sep 2018 06:00:00 GMT"
+    "cappedIEOStart" : "Fri, 15 Sep 2018 06:00:00 GMT",
+    "publicIEOStartTime" : "Sat, 16 Sep 2018 06:00:00 GMT",
+    "publicIEOEndTime" : "Sun, 17 Sep 2018 06:00:00 GMT"
   },
   "operators" : {
     "kyc" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb2",
@@ -17,5 +17,6 @@
   "initialRate" : {
     "numerator" : "1234",
     "denominator" : "234454"
-  }
+  },
+  "output filename": "ropstenDeploy.json"
 }

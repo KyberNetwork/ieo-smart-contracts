@@ -8,6 +8,7 @@ import "./KyberIEOInterface.sol";
 
 
 contract KyberIEO is KyberIEOInterface, CapManager {
+    mapping(address=>bool) public whiteListedAddresses;
     ERC20 public token;
     uint  public raisedWei;
     uint  public distributedTokensTwei;
@@ -52,6 +53,7 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         require(!haltedIEO);
         require(IEOStarted());
         require(!IEOEnded());
+        require((contributor == msg.sender) || whiteListedAddresses[msg.sender]);
 
         uint rateNumerator;
         uint rateDenominator;
@@ -82,6 +84,12 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         emit Contribution(msg.sender, contributor, userId, tokenQty, weiPayment);
 
         return true;
+    }
+
+    event addressWhiteListed(address _address, bool whiteListed);
+    function whiteListAddress(address addr, bool whiteListed) public onlyAdmin {
+        whiteListedAddresses[addr] = whiteListed;
+        emit addressWhiteListed(addr, whiteListed);
     }
 
     function getRate () public view returns(uint rateNumerator, uint rateDenominator) {

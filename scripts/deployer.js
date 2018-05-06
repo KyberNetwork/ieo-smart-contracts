@@ -138,6 +138,8 @@ let rateOperator;
 let kycOperator;
 let alerter;
 
+let whiteListAddresses;
+
 let initialRateN = BigNumber(7);
 let initialRateD = BigNumber(8);
 
@@ -162,6 +164,9 @@ function parseInput( jsonInput ) {
     rateOperator = operatorParams["rate"];
     kycOperator = operatorParams["kyc"];
     alerter = operatorParams["alerter"];
+
+    //white listed address
+    whiteListAddresses = jsonInput["whiteListAddresses"];
 
     // initial rate
     const initialRateParams = jsonInput["initialRate"];
@@ -222,7 +227,13 @@ async function main() {
   // add kyc operator
   console.log("Add kyc operator");
   await sendTx(IEOContract.methods.addOperator(kycOperator));
-  // add alerter
+
+  console.log("white list addresses");
+  //whitelist addresses
+  for(let i = 0; i < whiteListAddresses.length; i++) {
+    await sendTx(IEOContract.methods.whiteListAddress(whiteListAddresses[i], true));
+  }
+
   // transfer admin
   console.log("transfer admin");
   await sendTx(IEOContract.methods.transferAdminQuickly(admin));
@@ -272,7 +283,6 @@ async function waitForEth() {
   }
 }
 
-
 let filename;
 let content;
 let jsonInput;
@@ -295,6 +305,7 @@ function printParams(jsonInput) {
     dictOutput["IEO Rate Address"] = rateContractAddress;
     dictOutput["constructor"] = jsonInput["constructor"];
     dictOutput["operators"] = jsonInput["operators"];
+    dictOutput["whiteListAddresses"] = jsonInput["whiteListAddresses"];
     dictOutput["rate"] = jsonInput["initialRate"];
     const json = JSON.stringify(dictOutput, null, 2);
     console.log(json);

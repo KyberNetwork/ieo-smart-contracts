@@ -166,6 +166,9 @@ contract('KyberIEOWrapper', function(accounts) {
         await IEORateInst.addOperator(operator);
         await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
 
+        //white list wrapper in kyberIEO
+        await kyberIEO.whiteListAddress(kyberIEOWrapper.address, true, {from: admin});
+
         let rate = await kyberIEO.getRate();
         assert.equal(rate[0].valueOf(), rateNumerator, "wrong numerator value");
         assert.equal(rate[1].valueOf(), rateDenominator, "wrong denominator value");
@@ -200,6 +203,48 @@ contract('KyberIEOWrapper', function(accounts) {
 
 //        console.log(result.logs[0].args)
         let expectedTokenQty = (new BigNumber(expectedEtherPayment)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedTokenQty = expectedTokenQty.minus(expectedTokenQty.mod(1));
+        let rxQuantity = await IEOToken.balanceOf(address1User1);
+        assert.equal(rxQuantity.valueOf(), expectedTokenQty.valueOf());
+    });
+
+    it("test trade reverted when wrapper not whitelisted in IEO.", async function () {
+        isStarted = await kyberIEO.IEOStarted();
+        assert.equal(isStarted, true, "IEO started should be true now");
+
+        await kyberIEO.whiteListAddress(kyberIEOWrapper.address, false);
+
+        let contributorInitialTweiIEO = await IEOToken.balanceOf(address1User1);
+
+        //api: token, amountTwei, minConversionRate, network, kyberIEO, vU1Add1, rU1Add1, sU1Add1
+        let amountTwei = 350;
+        let maxAmountWei = 500;
+
+        try {
+            await kyberIEOWrapper.contributeWithToken(user1ID, otherToken.address, amountTwei, 0, maxAmountWei,
+                    network.address, kyberIEO.address, vU1Add1, rU1Add1, sU1Add1, {from: address1User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //see same IEO token twei balance
+        let contributorTweiIEO = await IEOToken.balanceOf(address1User1);
+        assert.equal(contributorInitialTweiIEO.valueOf(), contributorTweiIEO.valueOf());
+
+        //list wrapper back
+        await kyberIEO.whiteListAddress(kyberIEOWrapper.address, true);
+
+        let result = await kyberIEOWrapper.contributeWithToken(user1ID, otherToken.address, amountTwei, 0, maxAmountWei,
+                    network.address, kyberIEO.address, vU1Add1, rU1Add1, sU1Add1, {from: address1User1});
+
+        let expectedEtherPayment = (new BigNumber(amountTwei)).multipliedBy(otherTokenRate).div(ratePrecision);
+        expectedEtherPayment = expectedEtherPayment.minus(expectedEtherPayment.mod(1));
+
+        assert.equal(result.logs[0].args.tradedWei.valueOf(), expectedEtherPayment);
+
+//        console.log(result.logs[0].args)
+        let expectedTokenQty = ((new BigNumber(expectedEtherPayment)).multipliedBy(rateNumerator).div(rateDenominator)).plus(contributorInitialTweiIEO);
         expectedTokenQty = expectedTokenQty.minus(expectedTokenQty.mod(1));
         let rxQuantity = await IEOToken.balanceOf(address1User1);
         assert.equal(rxQuantity.valueOf(), expectedTokenQty.valueOf());

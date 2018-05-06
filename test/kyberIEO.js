@@ -217,6 +217,7 @@ contract('KyberIEO', function(accounts) {
         assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
     });
 
+
     it("test contribution reverted when cap reached and later success in open IEO stage.", async function () {
         let weiValue = 100000;
 
@@ -258,6 +259,118 @@ contract('KyberIEO', function(accounts) {
         let rxDistributedTokensTwei = await kyberIEO.distributedTokensTwei();
         assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
     });
+
+    it("test contirbution reverted when contributor not msg.sender", async function () {
+        let weiValue = 50;
+        let expectedTokenQty = (new BigNumber(weiValue)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedTokenQty = expectedTokenQty.minus(expectedTokenQty.mod(1));
+
+        let add1U1StartWeiBalance = await Helper.getBalancePromise(address1User1);
+
+        //send contribution from different address, see reverted
+        try {
+            await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address2User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        let add1U1WeiBalance = await Helper.getBalancePromise(address1User1);
+        assert.equal(add1U1StartWeiBalance.valueOf(), add1U1WeiBalance.valueOf());
+
+        // see success with contributor and sender are same address
+        let result = await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+        assert.equal(result.logs[0].args.distributedTokensTwei.valueOf(), expectedTokenQty.valueOf())
+        assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue.valueOf())
+        assert.equal(result.logs[0].args.contributor, address1User1);
+//        console.log(result.logs[0].args)
+
+        contributorTokenTweiBalance += expectedTokenQty * 1;
+
+        let rxQuantity = await token.balanceOf(address1User1);
+        assert.equal(rxQuantity.valueOf(), contributorTokenTweiBalance.valueOf());
+    });
+
+    it("test only admin can white list or unlist address.", async function () {
+        let isListed = await kyberIEO.whiteListedAddresses(address2User1);
+        assert.equal(isListed.valueOf(), false);
+
+        //try to list from non admin
+        try {
+            await kyberIEO.whiteListAddress(address2User1, true, {from: operator});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        isListed = await kyberIEO.whiteListedAddresses(address2User1);
+        assert.equal(isListed.valueOf(), false);
+
+        //list from admin  check event
+        let result = await kyberIEO.whiteListAddress(address2User1, true, {from: admin});
+//        console.log(result.logs[0].args);
+        assert.equal(result.logs[0].args._address, address2User1);
+        assert.equal(result.logs[0].args.whiteListed, true);
+
+        isListed = await kyberIEO.whiteListedAddresses(address2User1);
+        assert.equal(isListed.valueOf(), true);
+
+        //try to list from non admin
+        try {
+            await kyberIEO.whiteListAddress(address2User1, false, {from: operator});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //should stay listed
+        isListed = await kyberIEO.whiteListedAddresses(address2User1);
+        assert.equal(isListed.valueOf(), true);
+
+        //list from admin
+        result = await kyberIEO.whiteListAddress(address2User1, false, {from: admin});
+        assert.equal(result.logs[0].args._address, address2User1);
+        assert.equal(result.logs[0].args.whiteListed, false);
+
+        //see unlisted
+        isListed = await kyberIEO.whiteListedAddresses(address2User1);
+        assert.equal(isListed.valueOf(), false);
+    });
+
+
+    it("test white listed address can contribute for another address.", async function () {
+        await kyberIEO.whiteListAddress(address2User1, true, {from: admin});
+
+        let weiValue = 50;
+
+        let add1U1StartTweiBalance = await token.balanceOf(address1User1);
+
+        //send contribution from non listed different address, see reverted
+        try {
+            await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address3User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        let add1U1TweiBalance = await token.balanceOf(address1User1);
+        assert.equal(add1U1StartTweiBalance.valueOf(), add1U1TweiBalance.valueOf());
+
+        //see success from listed address
+        let result = await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address2User1});
+
+        let expectedTokenQty = (new BigNumber(weiValue)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedTokenQty = expectedTokenQty.minus(expectedTokenQty.mod(1));
+
+        assert.equal(result.logs[0].args.distributedTokensTwei.valueOf(), expectedTokenQty.valueOf())
+        assert.equal(result.logs[0].args.payedWei.valueOf(), weiValue.valueOf())
+        assert.equal(result.logs[0].args.contributor, address1User1);
+
+
+        add1U1TweiBalance = await token.balanceOf(address1User1);
+        let expecteTwei = expectedTokenQty.plus(add1U1StartTweiBalance.valueOf());
+        assert.equal(expecteTwei.valueOf(), add1U1TweiBalance.valueOf());
+   });
 
     it("test contribution resulting in 0 tokens is reverted.", async function () {
         let weiValue = 1;
@@ -554,7 +667,7 @@ contract('KyberIEO', function(accounts) {
     });
 
 
-    it("test contribution while calling halt IEO and resume IEO API.", async function () {
+    it("test contribution while calling halt IEO and resume IEO.", async function () {
         tokenDecimals = 18;
         token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
 
@@ -887,7 +1000,6 @@ contract('KyberIEO', function(accounts) {
         }
     });
 
-
     it("test contribution wallet and debug buy.", async function () {
         let weiValue = 10000;
 
@@ -902,6 +1014,18 @@ contract('KyberIEO', function(accounts) {
         let walletBalanceWei = await Helper.getBalancePromise(contributionWallet);
 
         assert.equal(walletBalanceWei.valueOf(), walletStartBalanceWei.plus(debugBuyWei).valueOf());
+
+        //see debug buy fails with different value (not 123)
+        try {
+            debugBuyWei = 122;
+            await kyberIEO.debugBuy({value: debugBuyWei});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        let walletBalanceWei2 = await Helper.getBalancePromise(contributionWallet);
+        assert.equal(walletBalanceWei.valueOf(), walletBalanceWei2.valueOf());
     });
 
     it("verify deploy contract revert for bad values.", async function () {
@@ -980,4 +1104,74 @@ contract('KyberIEO', function(accounts) {
             assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
         }
     });
+
+    it("test loop of many small contributions in open stage 'stress'.", async function () {
+        tokenDecimals = 18;
+        token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
+
+        let now = await web3.eth.getBlock('latest').timestamp;
+
+        cappedStartTime = now + 100;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
+
+        kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
+        await kyberIEO.addOperator(signer);
+
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 9);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
+
+        IEORateAddress = await kyberIEO.IEORateContract();
+        let IEORateInst = await IEORate.at(IEORateAddress);
+        await IEORateInst.addOperator(operator);
+        //set rate 1 : 2 for easy calculations
+        await IEORateInst.setRateEthToToken(1, 2, {from: operator});
+
+        await Helper.sendPromise('evm_increaseTime', [(dayInSecs * 1 + 100 * 1)]);
+        await Helper.sendPromise('evm_mine', []);
+
+        let expectedTokensPerAddress = 0;
+
+        let numLoops = 45;
+        let weiValue = 20;
+        let tokenQty;
+        let purchasedWei = 0;
+        let distributedTokensTwei = 0;
+
+        for (let i = 0; i < numLoops; i++) {
+            weiValue += 2;
+            tokenQty = weiValue / 2;
+
+            await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+            await kyberIEO.contribute(address2User1, user1ID, vU1Add2, rU1Add2, sU1Add2, {value: weiValue, from: address2User1});
+            await kyberIEO.contribute(address3User1, user1ID, vU1Add3, rU1Add3, sU1Add3, {value: weiValue, from: address3User1});
+            await kyberIEO.contribute(address1User2, user2ID, vU2Add1, rU2Add1, sU2Add1, {value: weiValue, from: address1User2});
+            await kyberIEO.contribute(address1User3, user3ID, vU3Add1, rU3Add1, sU3Add1, {value: weiValue, from: address1User3});
+
+
+            expectedTokensPerAddress += 1 * tokenQty;
+
+            distributedTokensTwei += 5 * tokenQty;
+            purchasedWei += weiValue * 5;
+        }
+
+        let u1Add1Balance = await token.balanceOf(address1User1);
+        let u1Add2Balance = await token.balanceOf(address2User1);
+        let u1Add3Balance = await token.balanceOf(address3User1);
+        let u2Add1Balance = await token.balanceOf(address1User2);
+        let u3Add1Balance = await token.balanceOf(address1User3);
+
+        assert.equal(u1Add1Balance.valueOf(), expectedTokensPerAddress);
+        assert.equal(u1Add2Balance.valueOf(), expectedTokensPerAddress);
+        assert.equal(u1Add3Balance.valueOf(), expectedTokensPerAddress);
+        assert.equal(u2Add1Balance.valueOf(), expectedTokensPerAddress);
+        assert.equal(u3Add1Balance.valueOf(), expectedTokensPerAddress);
+
+        let rxRaisedWei = await kyberIEO.raisedWei();
+        assert.equal(rxRaisedWei.valueOf(), purchasedWei.valueOf());
+
+        let rxDistributedTokensTwei = await kyberIEO.distributedTokensTwei();
+        assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
+    });
+
 });

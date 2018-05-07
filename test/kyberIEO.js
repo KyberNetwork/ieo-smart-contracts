@@ -217,7 +217,6 @@ contract('KyberIEO', function(accounts) {
         assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
     });
 
-
     it("test contribution reverted when cap reached and later success in open IEO stage.", async function () {
         let weiValue = 100000;
 
@@ -541,7 +540,6 @@ contract('KyberIEO', function(accounts) {
         } catch(e){
             assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
         }
-
 
         cap = await kyberIEO.getContributorRemainingCap(user1ID);
         assert.equal(cap.valueOf(), capWei.valueOf(), "cap should be as user cap now");
@@ -1132,7 +1130,7 @@ contract('KyberIEO', function(accounts) {
 
         let expectedTokensPerAddress = 0;
 
-        let numLoops = 45;
+        let numLoops = 17;
         let weiValue = 20;
         let tokenQty;
         let purchasedWei = 0;
@@ -1174,4 +1172,237 @@ contract('KyberIEO', function(accounts) {
         assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
     });
 
+    it("test 'real' contribution scenario.", async function () {
+        tokenDecimals = 18;
+        token = await TestToken.new("IEO Token", "IEO", tokenDecimals);
+
+        let now = await web3.eth.getBlock('latest').timestamp;
+
+        capWei = (new BigNumber(10)).pow(16);
+        cappedStartTime = now + 100;
+        openStartTime = now * 1 + dayInSecs * 1;
+        endTime = now * 1 + dayInSecs * 2;
+
+        kyberIEO = await KyberIEO.new(admin, contributionWallet, token.address, capWei.valueOf(), IEOId, cappedStartTime, openStartTime, endTime);
+        await kyberIEO.addOperator(signer);
+
+        kyberIEOInitialTokenTwei = (new BigNumber(10)).pow(tokenDecimals + 1 * 9);
+        await token.transfer(kyberIEO.address, kyberIEOInitialTokenTwei.valueOf());
+
+        IEORateAddress = await kyberIEO.IEORateContract();
+        let IEORateInst = await IEORate.at(IEORateAddress);
+        await IEORateInst.addOperator(operator);
+        //set rate 1 : 2 for easy calculations
+        await IEORateInst.setRateEthToToken(rateNumerator, rateDenominator, {from: operator});
+
+        //before open- revert
+        let weiValue = 20;
+        try {
+            result = await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue, from: address1User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //move to capped stage
+        await Helper.sendPromise('evm_increaseTime', [(100 * 1)]);
+        await Helper.sendPromise('evm_mine', []);
+
+        let expectedTwei = [(new BigNumber(0)), (new BigNumber(0)), (new BigNumber(0)), (new BigNumber(0)), (new BigNumber(0))];
+        raisedWei = new BigNumber(0);
+        distributedTokensTwei = new BigNumber(0);
+
+        //user 1 address1.
+        weiValue = capWei.div(2).plus(10);
+        expectedToken = getTokenQty(weiValue, rateNumerator, rateDenominator);
+
+        await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue.valueOf() , from: address1User1});
+        expectedTwei[0] = expectedTwei[0].plus(expectedToken);
+        distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+        raisedWei = raisedWei.plus(weiValue);
+
+        //user 3 with bad signature
+        try {
+            await kyberIEO.contribute(address1User3, user3ID, vU3Add1, rU3Add1, sU1Add1, {value: weiValue.valueOf(), from: address1User3});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //user1 address2
+        effectiveWei = capWei.minus(weiValue);
+        expectedToken = getTokenQty(effectiveWei, rateNumerator, rateDenominator);
+
+        //above cap value will be sent back
+        await kyberIEO.contribute(address2User1, user1ID, vU1Add2, rU1Add2, sU1Add2, {value: weiValue.valueOf(), from: address2User1});
+        expectedTwei[1] = expectedTwei[1].plus(expectedToken);
+        distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+        raisedWei = raisedWei.plus(effectiveWei);
+
+        //user3
+        weiValue = capWei.div(2).minus(10);
+        expectedToken = getTokenQty(weiValue, rateNumerator, rateDenominator);
+
+        await kyberIEO.contribute(address1User3, user3ID, vU3Add1, rU3Add1, sU3Add1, {value: weiValue.valueOf(), from: address1User3});
+        expectedTwei[4] = expectedTwei[4].plus(expectedToken);
+        distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+        raisedWei = raisedWei.plus(weiValue);
+
+        //user 3 with bad signature
+        try {
+            await kyberIEO.contribute(address1User3, user3ID, vU3Add1, rU3Add1, sU1Add1, {value: weiValue.valueOf(), from: address1User3});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //user2 - more then cap
+        weiValue = capWei.plus(10);
+        effectiveWei = capWei;
+        expectedToken = getTokenQty(effectiveWei, rateNumerator, rateDenominator);
+
+        await kyberIEO.contribute(address1User2, user2ID, vU2Add1, rU2Add1, sU2Add1, {value: weiValue.valueOf(), from: address1User2});
+        expectedTwei[3] = expectedTwei[3].plus(expectedToken);
+        distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+        raisedWei = raisedWei.plus(effectiveWei);
+
+        //user1 address3
+        weiValue = 30;
+        try {
+            await kyberIEO.contribute(address3User1, user1ID, vU1Add3, rU1Add3, sU1Add3, {value: weiValue.valueOf(), from: address3User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+
+        //user3 again
+        weiValue = capWei.div(2).minus(10);
+        expectedToken = getTokenQty(weiValue, rateNumerator, rateDenominator);
+
+        await kyberIEO.contribute(address1User3, user3ID, vU3Add1, rU3Add1, sU3Add1, {value: weiValue.valueOf(), from: address1User3});
+        expectedTwei[4] = expectedTwei[4].plus(expectedToken);
+        distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+        raisedWei = raisedWei.plus(weiValue);
+
+        //check values
+        let rxRaisedWei = await kyberIEO.raisedWei();
+        assert.equal(rxRaisedWei.valueOf(), raisedWei.valueOf());
+
+        let rxDistributedTokensTwei = await kyberIEO.distributedTokensTwei();
+        assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
+
+        let u1Add1Balance = await token.balanceOf(address1User1);
+        let u1Add2Balance = await token.balanceOf(address2User1);
+        let u1Add3Balance = await token.balanceOf(address3User1);
+        let u2Add1Balance = await token.balanceOf(address1User2);
+        let u3Add1Balance = await token.balanceOf(address1User3);
+
+        assert.equal(u1Add1Balance.valueOf(), expectedTwei[0]);
+        assert.equal(u1Add2Balance.valueOf(), expectedTwei[1]);
+        assert.equal(u1Add3Balance.valueOf(), expectedTwei[2]);
+        assert.equal(u2Add1Balance.valueOf(), expectedTwei[3]);
+        assert.equal(u3Add1Balance.valueOf(), expectedTwei[4]);
+
+//        move to open sale stage
+        await Helper.sendPromise('evm_increaseTime', [(dayInSecs * 1 + 100 * 1)]);
+        await Helper.sendPromise('evm_mine', []);
+
+
+        let numLoops = 9;
+        //loop in open stage
+
+        for (let i = 0; i < numLoops; i++) {
+            //user 1 address1.
+            weiValue = capWei.div(2).plus(10);
+            expectedToken = getTokenQty(weiValue, rateNumerator, rateDenominator);
+
+            await kyberIEO.contribute(address1User1, user1ID, vU1Add1, rU1Add1, sU1Add1, {value: weiValue.valueOf(), from: address1User1});
+            expectedTwei[0] = expectedTwei[0].plus(expectedToken);
+            distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+            raisedWei = raisedWei.plus(weiValue);
+
+            //user 3 with bad signature
+            try {
+                await kyberIEO.contribute(address1User3, user3ID, vU3Add1, rU3Add1, sU1Add1, {value: weiValue.valueOf(), from: address1User3});
+                assert(false, "throw was expected in line above.")
+            } catch(e){
+                assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+            }
+
+            //user1 address2
+            expectedToken = getTokenQty(weiValue, rateNumerator, rateDenominator);
+
+            await kyberIEO.contribute(address2User1, user1ID, vU1Add2, rU1Add2, sU1Add2, {value: weiValue.valueOf(), from: address2User1});
+            expectedTwei[1] = expectedTwei[1].plus(expectedToken);
+            distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+            raisedWei = raisedWei.plus(weiValue);
+
+            //user3
+            weiValue = capWei.div(2).minus(10);
+            expectedToken = getTokenQty(weiValue, rateNumerator, rateDenominator);
+            await kyberIEO.contribute(address1User3, user3ID, vU3Add1, rU3Add1, sU3Add1, {value: weiValue.valueOf(), from: address1User3});
+            expectedTwei[4] = expectedTwei[4].plus(expectedToken);
+            distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+            raisedWei = raisedWei.plus(weiValue);
+
+            //user 3 with bad signature
+            try {
+                await kyberIEO.contribute(address1User3, user3ID, vU3Add1, rU3Add1, sU1Add1, {value: weiValue.valueOf(), from: address1User3});
+                assert(false, "throw was expected in line above.")
+            } catch(e){
+                assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+            }
+
+            //user2
+            weiValue = capWei.plus(10);
+            expectedToken = getTokenQty(weiValue, rateNumerator, rateDenominator);
+
+            await kyberIEO.contribute(address1User2, user2ID, vU2Add1, rU2Add1, sU2Add1, {value: weiValue.valueOf(), from: address1User2});
+            expectedTwei[3] = expectedTwei[3].plus(expectedToken);
+            distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+            raisedWei = raisedWei.plus(weiValue);
+
+            //user1 address3
+            weiValue = new BigNumber(30);
+            expectedToken = getTokenQty(weiValue, rateNumerator, rateDenominator);
+            await kyberIEO.contribute(address3User1, user1ID, vU1Add3, rU1Add3, sU1Add3, {value: weiValue.valueOf(), from: address3User1});
+            expectedTwei[2] = expectedTwei[2].plus(expectedToken);
+            distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+            raisedWei = raisedWei.plus(weiValue);
+
+            //user3 again
+            weiValue = capWei.div(2).minus(10);
+            expectedToken = getTokenQty(weiValue, rateNumerator, rateDenominator);
+
+            await kyberIEO.contribute(address1User3, user3ID, vU3Add1, rU3Add1, sU3Add1, {value: weiValue.valueOf(), from: address1User3});
+            expectedTwei[4] = expectedTwei[4].plus(expectedToken);
+            distributedTokensTwei = distributedTokensTwei.plus(expectedToken);
+            raisedWei = raisedWei.plus(weiValue);
+        }
+
+        u1Add1Balance = await token.balanceOf(address1User1);
+        u1Add2Balance = await token.balanceOf(address2User1);
+        u1Add3Balance = await token.balanceOf(address3User1);
+        u2Add1Balance = await token.balanceOf(address1User2);
+        u3Add1Balance = await token.balanceOf(address1User3);
+
+        assert.equal(u1Add1Balance.valueOf(), expectedTwei[0]);
+        assert.equal(u1Add2Balance.valueOf(), expectedTwei[1]);
+        assert.equal(u1Add3Balance.valueOf(), expectedTwei[2]);
+        assert.equal(u2Add1Balance.valueOf(), expectedTwei[3]);
+        assert.equal(u3Add1Balance.valueOf(), expectedTwei[4]);
+
+        rxRaisedWei = await kyberIEO.raisedWei();
+        assert.equal(rxRaisedWei.valueOf(), raisedWei.valueOf());
+
+        rxDistributedTokensTwei = await kyberIEO.distributedTokensTwei();
+        assert.equal(rxDistributedTokensTwei.valueOf(), distributedTokensTwei.valueOf());
+    });
 });
+
+
+function getTokenQty(weiValue, rateNumerator, rateDenominator) {
+    let tokenQty = weiValue.multipliedBy(rateNumerator).div(rateDenominator);
+    tokenQty = tokenQty.minus(tokenQty.mod(1));
+    return(tokenQty);
+}

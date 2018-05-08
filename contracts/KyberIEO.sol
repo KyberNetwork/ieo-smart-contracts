@@ -57,10 +57,10 @@ contract KyberIEO is KyberIEOInterface, CapManager {
 
         uint rateNumerator;
         uint rateDenominator;
-        (rateNumerator, rateDenominator) = IEORateContract.getRate();
+        require(validateContributor(contributor, userId, v, r, s));
+        (rateNumerator, rateDenominator) = IEORateContract.getRate(contributor);
         require(rateNumerator > 0);
         require(rateDenominator > 0);
-        require(validateContributor(contributor, userId, v, r, s));
 
         uint weiPayment = eligibleCheckAndIncrement(userId, msg.value);
         require(weiPayment > 0);
@@ -92,8 +92,8 @@ contract KyberIEO is KyberIEOInterface, CapManager {
         emit addressWhiteListed(addr, whiteListed);
     }
 
-    function getRate () public view returns(uint rateNumerator, uint rateDenominator) {
-        (rateNumerator, rateDenominator) = IEORateContract.getRate();
+    function getRate (address contributor) public view returns(uint rateNumerator, uint rateDenominator) {
+        (rateNumerator, rateDenominator) = IEORateContract.getRate(contributor);
     }
 
     // just to check that funds goes to the right place

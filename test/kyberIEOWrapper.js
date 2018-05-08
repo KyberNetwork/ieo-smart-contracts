@@ -169,7 +169,7 @@ contract('KyberIEOWrapper', function(accounts) {
         //white list wrapper in kyberIEO
         await kyberIEO.whiteListAddress(kyberIEOWrapper.address, true, {from: admin});
 
-        let rate = await kyberIEO.getRate();
+        let rate = await kyberIEO.getRate(address1User2);
         assert.equal(rate[0].valueOf(), rateNumerator, "wrong numerator value");
         assert.equal(rate[1].valueOf(), rateDenominator, "wrong denominator value");
     });

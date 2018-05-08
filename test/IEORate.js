@@ -4,8 +4,12 @@ let IEORate = artifacts.require("./IEORate.sol");
 
 let Helper = require("./helper.js");
 let BigNumber = require('bignumber.js');
+
+
 let operator;
 let admin;
+let contributor;
+
 let IEORateInst;
 
 
@@ -16,6 +20,7 @@ contract('IEORate', function(accounts) {
     it("Init contract, set rate, test event", async function () {
         admin = accounts[0];
         operator = accounts[1];
+        contributor = accounts[2];
 
         IEORateInst = await IEORate.new(admin);
 
@@ -35,7 +40,7 @@ contract('IEORate', function(accounts) {
         let rxRateDenominator = await IEORateInst.ethToTokenDenominator();
         assert.equal(rxRateDenominator, rateDenominator);
 
-        let rate = await IEORateInst.getRate();
+        let rate = await IEORateInst.getRate(contributor);
         assert.equal(rate[0].valueOf(), rateNumerator);
         assert.equal(rate[1].valueOf(), rateDenominator);
     });
@@ -52,14 +57,14 @@ contract('IEORate', function(accounts) {
         }
 
         //verify rate hasn't changed
-        rate = await IEORateInst.getRate();
+        rate = await IEORateInst.getRate(contributor);
         assert.equal(rate[0].valueOf(), rateNumerator);
         assert.equal(rate[1].valueOf(), rateDenominator);
 
         result = await IEORateInst.setRateEthToToken(rateNumerator2, rateDenominator2, {from: operator});
 
         //verify rate has changed
-        rate = await IEORateInst.getRate();
+        rate = await IEORateInst.getRate(contributor);
         assert.equal(rate[0].valueOf(), rateNumerator2);
         assert.equal(rate[1].valueOf(), rateDenominator2);
     });
@@ -70,7 +75,7 @@ contract('IEORate', function(accounts) {
 
         result = await IEORateInst.setRateEthToToken(rateNumerator2, rateDenominator2, {from: operator});
         //verify rate has changed
-        rate = await IEORateInst.getRate();
+        rate = await IEORateInst.getRate(contributor);
         assert.equal(rate[0].valueOf(), rateNumerator2);
         assert.equal(rate[1].valueOf(), rateDenominator2);
 
@@ -85,7 +90,7 @@ contract('IEORate', function(accounts) {
         }
 
         //verify rate hasn't changed
-        rate = await IEORateInst.getRate();
+        rate = await IEORateInst.getRate(contributor);
         assert.equal(rate[0].valueOf(), rateNumerator2);
         assert.equal(rate[1].valueOf(), rateDenominator2);
 
@@ -97,14 +102,14 @@ contract('IEORate', function(accounts) {
         }
 
         //verify rate hasn't changed
-        rate = await IEORateInst.getRate();
+        rate = await IEORateInst.getRate(contributor);
         assert.equal(rate[0].valueOf(), rateNumerator2);
         assert.equal(rate[1].valueOf(), rateDenominator2);
 
         result = await IEORateInst.setRateEthToToken(rateNumerator3, rateDenominator3, {from: operator});
 
         //verify rate has changed
-        rate = await IEORateInst.getRate();
+        rate = await IEORateInst.getRate(contributor);
         assert.equal(rate[0].valueOf(), rateNumerator3);
         assert.equal(rate[1].valueOf(), rateDenominator3);
     });

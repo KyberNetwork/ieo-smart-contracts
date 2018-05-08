@@ -24,7 +24,8 @@ contract IEORate is Withdrawable {
         emit RateSet(rateNumerator, rateDenominator, msg.sender);
     }
 
-    function getRate () public view returns(uint rateNumerator, uint rateDenominator) {
+    function getRate (address contributor) public view returns(uint rateNumerator, uint rateDenominator) {
+        contributor; //later shall have different rate per user. logic not defined yet.
         rateNumerator = ethToTokenNumerator;
         rateDenominator = ethToTokenDenominator;
     }

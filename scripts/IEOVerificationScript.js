@@ -185,6 +185,9 @@ async function main() {
     let ProjectWallet = (await IEOInst.methods.contributionWallet().call()).toLowerCase();
     compareAndLog("ProjectWallet: " ,jsonProjectWallet, ProjectWallet);
 
+    let token = (await IEOInst.methods.token().call()).toLowerCase();
+    compareAndLog("ProjectWallet: " ,jsonToken, token);
+
     let contributorCapWei = (await IEOInst.methods.contributorCapWei().call()).toLowerCase();
     compareAndLog("contributorCapWei: " ,jsonContributorCapWei, contributorCapWei);
 

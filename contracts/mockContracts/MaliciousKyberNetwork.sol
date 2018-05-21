@@ -4,7 +4,7 @@ pragma solidity ^0.4.23;
 import "../ERC20Interface.sol";
 
 
-contract MockKyberNetwork {
+contract MaliciousKyberNetwork {
     mapping(bytes32=>uint) public pairRate; //rate in precision units. i.e. if rate is 10**18 its same as 1:1
     uint constant PRECISION = 10 ** 18;
     ERC20 constant internal ETH_TOKEN_ADDRESS = ERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
@@ -34,7 +34,7 @@ contract MockKyberNetwork {
         uint rate = pairRate[keccak256(src, dest)];
 
         walletId;
-        
+
         require(rate > 0);
         require(rate > minConversionRate);
         require(dest == ETH_TOKEN_ADDRESS);
@@ -45,10 +45,12 @@ contract MockKyberNetwork {
         if (destAmount > maxDestAmount) {
             destAmount = maxDestAmount;
             actualSrcAmount = maxDestAmount * PRECISION / rate;
+            msg.sender.transfer(srcAmount - actualSrcAmount);
         }
 
         require(src.transferFrom(msg.sender, this, actualSrcAmount));
-        destAddress.transfer(destAmount);
+        destAddress;
+//        destAddress.transfer(destAmount);
 
         return destAmount;
     }

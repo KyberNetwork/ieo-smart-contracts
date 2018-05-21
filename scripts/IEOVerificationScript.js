@@ -69,6 +69,8 @@ let jsonRateOperator;
 let jsonKycOperator;
 let jsonAlerter;
 
+let jsonWhiteListedAddresses;
+
 let jsonRateNumerator;
 let jsonRateDenominator;
 
@@ -92,11 +94,15 @@ function parseInput(jsonInput) {
     jsonCappedIEOStart = dateToBigNumber(ctorParams["cappedIEOStart"]);
     jsonOpenIEOStartTime = dateToBigNumber(ctorParams["publicIEOStartTime"]);
     jsonPublicIEOEndTime = dateToBigNumber(ctorParams["publicIEOEndTime"]);
+
     // operators
     const operatorParams = jsonInput["operators"];
     jsonRateOperator = operatorParams["rate"].toLowerCase();
     jsonKycOperator = operatorParams["kyc"].toLowerCase();
     jsonAlerter = operatorParams["alerter"].toLowerCase();
+
+    //white listed addresses
+    jsonWhiteListedAddresses = jsonInput["whiteListAddresses"];
 
     // rate
     const rateParams = jsonInput["rate"];
@@ -179,6 +185,9 @@ async function main() {
     let ProjectWallet = (await IEOInst.methods.contributionWallet().call()).toLowerCase();
     compareAndLog("ProjectWallet: " ,jsonProjectWallet, ProjectWallet);
 
+    let token = (await IEOInst.methods.token().call()).toLowerCase();
+    compareAndLog("ProjectWallet: " ,jsonToken, token);
+
     let contributorCapWei = (await IEOInst.methods.contributorCapWei().call()).toLowerCase();
     compareAndLog("contributorCapWei: " ,jsonContributorCapWei, contributorCapWei);
 
@@ -201,7 +210,12 @@ async function main() {
     for (let i = 0; i < operators.length; i++) {
         compareAndLog("operator " + i + ": ", jsonKycOperator, operators[i].toLowerCase());
     }
-    
+
+    for (let i = 0; i < jsonWhiteListedAddresses.length; i++) {
+        let isListed = (await IEOInst.methods.whiteListedAddresses(jsonWhiteListedAddresses[i]).call());
+        compareAndLog("whitelisted address " + i + ": " + jsonWhiteListedAddresses[i], isListed, true);
+    }
+
     let alerters = (await IEOInst.methods.getAlerters().call());
     for (let i = 0; i < alerters.length; i++) {
         compareAndLog("alerter " + i + ": ", jsonAlerter, alerters[i].toLowerCase());

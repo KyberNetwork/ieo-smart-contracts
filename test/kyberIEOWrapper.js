@@ -2,6 +2,7 @@ const TestToken = artifacts.require("./mockContracts/TestToken.sol");
 const KyberIEO = artifacts.require("./KyberIEO.sol");
 const KyberIEOWrapper = artifacts.require("./KyberIEOWrapper.sol");
 const MockKyberNetwork = artifacts.require("./MockKyberNetwork.sol");
+const MaliciousKyberNetwork = artifacts.require("./MaliciousKyberNetwork.sol");
 const IEORate = artifacts.require("./IEORate.sol");
 
 const Helper = require("./helper.js");
@@ -70,41 +71,41 @@ let sU3Add1;
 
 contract('KyberIEOWrapper', function(accounts) {
     it("Init signatures", async function () {
-      let sig;
-      user1ID = '0x123456789987654321abcd';
-      address1User1 = accounts[1];
-      sig = Helper.getContributionSignature(address1User1,user1ID,IEOId);
-      vU1Add1 = sig.v;
-      rU1Add1 = sig.r;
-      sU1Add1 = sig.s;
+        let sig;
+        user1ID = '0x123456789987654321abcd';
+        address1User1 = accounts[1];
+        sig = Helper.getContributionSignature(address1User1,user1ID,IEOId);
+        vU1Add1 = sig.v;
+        rU1Add1 = sig.r;
+        sU1Add1 = sig.s;
 
-      address2User1 = accounts[7];
-      sig = Helper.getContributionSignature(address2User1,user1ID,IEOId);
-      vU1Add2 = sig.v;
-      rU1Add2 = sig.r;
-      sU1Add2 = sig.s;
+        address2User1 = accounts[7];
+        sig = Helper.getContributionSignature(address2User1,user1ID,IEOId);
+        vU1Add2 = sig.v;
+        rU1Add2 = sig.r;
+        sU1Add2 = sig.s;
 
-      address3User1 = accounts[8];
-      sig = Helper.getContributionSignature(address3User1,user1ID,IEOId);
-      vU1Add3 = sig.v;
-      rU1Add3 = sig.r;
-      sU1Add3 = sig.s;
+        address3User1 = accounts[8];
+        sig = Helper.getContributionSignature(address3User1,user1ID,IEOId);
+        vU1Add3 = sig.v;
+        rU1Add3 = sig.r;
+        sU1Add3 = sig.s;
 
-      //user 2
-      user2ID = '0x744456789987654321abcd';
-      address1User2 = accounts[9];
-      sig = Helper.getContributionSignature(address1User2,user2ID,IEOId);
-      vU2Add1 = sig.v;
-      rU2Add1 = sig.r;
-      sU2Add1 = sig.s;
+        //user 2
+        user2ID = '0x744456789987654321abcd';
+        address1User2 = accounts[9];
+        sig = Helper.getContributionSignature(address1User2,user2ID,IEOId);
+        vU2Add1 = sig.v;
+        rU2Add1 = sig.r;
+        sU2Add1 = sig.s;
 
-      //user3
-      user3ID = '0x744456789983217654321abcd';
-      address1User3 = accounts[6];
-      sig = Helper.getContributionSignature(address1User3,user3ID,IEOId);
-      vU3Add1 = sig.v;
-      rU3Add1 = sig.r;
-      sU3Add1 = sig.s;
+        //user3
+        user3ID = '0x744456789983217654321abcd';
+        address1User3 = accounts[6];
+        sig = Helper.getContributionSignature(address1User3,user3ID,IEOId);
+        vU3Add1 = sig.v;
+        rU3Add1 = sig.r;
+        sU3Add1 = sig.s;
     });
 
 
@@ -276,6 +277,7 @@ contract('KyberIEOWrapper', function(accounts) {
                             kyberIEO.address, vU1Add1, rU1Add1, sU1Add1, {from: address1User1});
 
 //        console.log(result.logs[0].args)
+//        console.log(result.logs[1].args)
         assert.equal(result.logs[0].args.tradedWei.valueOf(), contributorCapWei);
         assert.equal(result.logs[0].args.changeTwei.valueOf(), expectedTweiChange.valueOf());
 
@@ -394,8 +396,6 @@ contract('KyberIEOWrapper', function(accounts) {
         //api: token, amountTwei, minConversionRate, network, kyberIEO, vU1Add1, rU1Add1, sU1Add1
         let tradeTwei = 1500;
         let maxAmountWei = 100000;
-        let expectedEtherPayment = (new BigNumber(tradeTwei)).multipliedBy(otherTokenRate).div(ratePrecision);
-        expectedEtherPayment = expectedEtherPayment.minus(expectedEtherPayment.mod(1));
 
         let contributorInitialTweiIEO = await IEOToken.balanceOf(address2User1);
 
@@ -415,5 +415,50 @@ contract('KyberIEOWrapper', function(accounts) {
 //
         let rxQuantity = await IEOToken.balanceOf(address2User1);
         assert.equal(rxQuantity.valueOf(), contributorInitialTweiIEO.valueOf());
+    });
+
+    it("test trade with malicious network is reverted.", async function () {
+        openIEOStarted = await kyberIEO.openIEOStarted();
+        assert.equal(openIEOStarted, true, "open IEO started should be true now");
+        assert.equal((await kyberIEO.IEOEnded()), false, "IEO ended should be false now");
+
+        let maliciousNetwork = await MaliciousKyberNetwork.new();
+        await maliciousNetwork.setPairRate(otherToken.address, etherAddress, otherTokenRate.valueOf());
+
+        //api: token, amountTwei, minConversionRate, network, kyberIEO, vU1Add1, rU1Add1, sU1Add1
+        let tradeTwei = 3579;
+        let maxAmountWei = 100000;
+        let expectedEtherPayment = (new BigNumber(tradeTwei)).multipliedBy(otherTokenRate).div(ratePrecision);
+        expectedEtherPayment = expectedEtherPayment.minus(expectedEtherPayment.mod(1));
+
+        let contributorInitialTweiIEO = await IEOToken.balanceOf(address2User1);
+
+        //approve
+        await otherToken.transfer(address2User1, tradeTwei);
+        await otherToken.approve(kyberIEOWrapper.address, tradeTwei, {from: address2User1});
+
+        //now contribute should revert - malicious network doesn't transfer ethers.
+        try {
+            await kyberIEOWrapper.contributeWithToken(user1ID, otherToken.address, tradeTwei, 0, maxAmountWei,
+                            maliciousNetwork.address, kyberIEO.address, vU1Add2, rU1Add2, sU1Add2, {from: address2User1});
+            assert(false, "throw was expected in line above.")
+        } catch(e){
+            assert(Helper.isRevertErrorMessage(e), "expected throw but got: " + e);
+        }
+//
+        let rxQuantity = await IEOToken.balanceOf(address2User1);
+        assert.equal(rxQuantity.valueOf(), contributorInitialTweiIEO.valueOf());
+
+        // same trade with "Good" network
+        await kyberIEOWrapper.contributeWithToken(user1ID, otherToken.address, tradeTwei, 0, maxAmountWei,
+                         network.address, kyberIEO.address, vU1Add2, rU1Add2, sU1Add2, {from: address2User1});
+
+        //calculate IEO token amount
+        let expectedIEOTokenTradedQty = (new BigNumber(expectedEtherPayment)).multipliedBy(rateNumerator).div(rateDenominator);
+        expectedIEOTokenTradedQty = expectedIEOTokenTradedQty.minus(expectedIEOTokenTradedQty.mod(1));
+        let expectedIEOQty = expectedIEOTokenTradedQty.plus(contributorInitialTweiIEO);
+
+        rxQuantity = await IEOToken.balanceOf(address2User1);
+        assert.equal(rxQuantity.valueOf(), expectedIEOQty.valueOf());
     });
 });

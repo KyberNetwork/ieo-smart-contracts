@@ -69,7 +69,7 @@ contract KyberIEOWrapper is Withdrawable {
             r,
             s);
         return contribute(data);
-    }   
+    }
 
     function contribute(ContributeData data) internal returns(bool) {
         uint weiCap = data.kyberIEO.getContributorRemainingCap(data.userId);
@@ -86,7 +86,7 @@ contract KyberIEOWrapper is Withdrawable {
             data.minConversionRate, this);
         uint weiAfter = address(this).balance;
 
-        require(amountWei == (weiAfter - weiBefore));
+        require(amountWei == weiAfter.sub(weiBefore));
 
         //emit event here where we still have valid "change" value
         emit ContributionByToken(

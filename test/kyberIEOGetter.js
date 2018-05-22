@@ -183,7 +183,7 @@ contract('KyberIEOGetter', function(accounts) {
             assert.equal(IEOsData[2][i].valueOf(), IEOTokens[i].address);
             let bufStr = hexStrToBytes(IEOsData[3][i].valueOf());
             let res = '';
-git gig            for (let i = 0 ; i < bufStr.length; i++) {
+            for (let i = 0 ; i < bufStr.length; i++) {
                 res += String.fromCharCode(bufStr[i]);
             }
             assert.equal(res, (await IEOTokens[i].symbol()))

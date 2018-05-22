@@ -6,6 +6,11 @@ import "./IEORate.sol";
 import "./ERC20Interface.sol";
 
 
+contract ERC20Plus is ERC20 {
+    function symbol() external view returns(string);
+}
+
+
 contract KyberIEOGetter {
 
     function getIEOInfo(KyberIEO IEO) public view returns (
@@ -24,7 +29,7 @@ contract KyberIEOGetter {
         amounts = [IEO.distributedTokensTwei(), IEO.raisedWei(), IEO.contributorCapWei(), 0];
         amounts[3] = IEO.token().balanceOf(address(IEO));
 
-        return(IEOTimes, IEOStates, rate, amounts, IEO.token().decimals(), IEO.token(), IEO.token().symbol());
+        return(IEOTimes, IEOStates, rate, amounts, IEO.token().decimals(), IEO.token(), ERC20Plus(IEO.token()).symbol());
     }
 
     function getIEOsInfo(KyberIEO[] IEOs) public view returns(
@@ -47,7 +52,7 @@ contract KyberIEOGetter {
             distributedTweiPerIEO[i] = IEOs[i].distributedTokensTwei();
             tokenBalancePerIEO[i] = IEOs[i].token().balanceOf(address(IEOs[i]));
             tokenAddressPerIEO[i] = IEOs[i].token();
-            tokenSymbolPerIEO[i] = stringToBytes32(IEOs[i].token().symbol());
+            tokenSymbolPerIEO[i] = stringToBytes32(ERC20Plus(IEOs[i].token()).symbol());
             tokenDecimalsPerIEO[i] = IEOs[i].token().decimals();
         }
     }

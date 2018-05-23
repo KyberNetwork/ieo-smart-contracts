@@ -41,7 +41,6 @@ contract KyberIEOGetter {
         )
     {
 
-//        IEOInfo memory info;
         distributedTweiPerIEO = new uint[](IEOs.length);
         tokenBalancePerIEO = new uint[](IEOs.length);
         tokenAddressPerIEO = new address[](IEOs.length);

@@ -39,6 +39,7 @@ Date.time = function() { return Date.now().getUnixTime(); }
 
 const rand = web3.utils.randomHex(7);
 let privateKey = web3.utils.sha3("truffle sucks" + rand);
+privateKey = '0x5427c9df8a951a6b3030b24728f46960f12fae6c494b9442bc6942e50845664a';
 
 //if (printPrivateKey) {
   console.log("privateKey", privateKey);
@@ -131,7 +132,7 @@ const input = {
     "KyberIEOGetter.sol" : fs.readFileSync(contractPath + 'KyberIEOGetter.sol', 'utf8'),
     "KyberIEOInterface.sol" : fs.readFileSync(contractPath + 'KyberIEOInterface.sol', 'utf8'),
     "Withdrawable.sol" : fs.readFileSync(contractPath + 'Withdrawable.sol', 'utf8'),
-"PermissionGroups.sol" : fs.readFileSync(contractPath + 'PermissionGroups.sol', 'utf8')
+    "PermissionGroups.sol" : fs.readFileSync(contractPath + 'PermissionGroups.sol', 'utf8')
 };
 
 
@@ -170,7 +171,7 @@ async function main() {
     console.log("finished compilation");
 
     await waitForEth();
-g
+
     console.log("deploying IEO getter");
     let IEOGetterContract;
     [IEOGetterAddress,IEOGetterContract] = await deployContract(output, "KyberIEOGetter.sol:KyberIEOGetter", []);

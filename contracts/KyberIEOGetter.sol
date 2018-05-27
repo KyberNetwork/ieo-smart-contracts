@@ -8,6 +8,7 @@ import "./ERC20Interface.sol";
 
 contract ERC20Plus is ERC20 {
     function symbol() external view returns(string);
+    function totalSupply() external view returns(uint);
 }
 
 
@@ -17,7 +18,7 @@ contract KyberIEOGetter {
         uint[3] IEOTimes,
         bool[4] IEOStates,
         uint[2] rate,
-        uint[4] amounts,
+        uint[5] amounts,
         uint tokenDecimals,
         address tokenAddress,
         string symbol
@@ -26,7 +27,7 @@ contract KyberIEOGetter {
         IEOTimes = [IEO.cappedIEOStartTime(), IEO.openIEOStartTime(), IEO.endIEOTime()];
         IEOStates = [IEO.IEOStarted(), IEO.openIEOStarted(), IEO.IEOEnded(), IEO.haltedIEO()];
         rate = [IEORate(IEO.IEORateContract()).ethToTokenNumerator(), IEORate(IEO.IEORateContract()).ethToTokenDenominator()];
-        amounts = [IEO.distributedTokensTwei(), IEO.raisedWei(), IEO.contributorCapWei(), 0];
+        amounts = [IEO.distributedTokensTwei(), IEO.raisedWei(), IEO.contributorCapWei(), 0, IEO.token().totalSupply()];
         amounts[3] = IEO.token().balanceOf(address(IEO));
 
         return(IEOTimes, IEOStates, rate, amounts, IEO.token().decimals(), IEO.token(), ERC20Plus(IEO.token()).symbol());
@@ -37,7 +38,8 @@ contract KyberIEOGetter {
         uint[] tokenBalancePerIEO,
         address[] tokenAddressPerIEO,
         bytes32[] tokenSymbolPerIEO,
-        uint[] tokenDecimalsPerIEO
+        uint[] tokenDecimalsPerIEO,
+        uint[] totalSupplyPerIEO
         )
     {
 
@@ -46,6 +48,7 @@ contract KyberIEOGetter {
         tokenAddressPerIEO = new address[](IEOs.length);
         tokenSymbolPerIEO = new bytes32[](IEOs.length);
         tokenDecimalsPerIEO = new uint[](IEOs.length);
+        totalSupplyPerIEO = new uint[](IEOs.length);
 
         for(uint i = 0; i < IEOs.length; i++) {
             distributedTweiPerIEO[i] = IEOs[i].distributedTokensTwei();
@@ -53,6 +56,7 @@ contract KyberIEOGetter {
             tokenAddressPerIEO[i] = IEOs[i].token();
             tokenSymbolPerIEO[i] = stringToBytes32(ERC20Plus(IEOs[i].token()).symbol());
             tokenDecimalsPerIEO[i] = IEOs[i].token().decimals();
+            totalSupplyPerIEO[i] = IEOs[i].token().totalSupply();
         }
     }
 

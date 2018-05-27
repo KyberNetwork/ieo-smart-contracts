@@ -163,7 +163,9 @@ contract('KyberIEOGetter', function(accounts) {
             assert.equal(IEOData[3][1].valueOf(), raisedWei[i]);
             assert.equal(IEOData[3][2].valueOf(), capsWei[i]);
             assert.equal(IEOData[3][3].valueOf(), (kyberIEOTokenBalanceTwei[i] - distributedTokens[i]));
-            
+            let token = IEOTokens[i];
+            assert.equal(IEOData[3][4].valueOf(), (await token.totalSupply()));
+
             //token data
             assert.equal(IEOData[4].valueOf(), tokenDecimals[i]);
             assert.equal(IEOData[5].valueOf(), IEOTokens[i].address);
@@ -188,6 +190,7 @@ contract('KyberIEOGetter', function(accounts) {
             }
             assert.equal(res, (await IEOTokens[i].symbol()))
             assert.equal(IEOsData[4][i].valueOf(), tokenDecimals[i]);
+            assert.equal(IEOsData[5][i].valueOf(), (await IEOTokens[i].totalSupply()));
          }
     });
 });

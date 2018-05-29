@@ -97,7 +97,7 @@ function parseInput(jsonInput) {
 
     // operators
     const operatorParams = jsonInput["operators"];
-    jsonRateOperator = operatorParams["rate"].toLowerCase();
+    jsonRateOperator = operatorParams["rateEthToToken"].toLowerCase();
     jsonKycOperator = operatorParams["kyc"].toLowerCase();
     jsonAlerter = operatorParams["alerter"].toLowerCase();
 
@@ -186,7 +186,7 @@ async function main() {
     compareAndLog("ProjectWallet: " ,jsonProjectWallet, ProjectWallet);
 
     let token = (await IEOInst.methods.token().call()).toLowerCase();
-    compareAndLog("ProjectWallet: " ,jsonToken, token);
+    compareAndLog("token: " ,jsonToken, token);
 
     let contributorCapWei = (await IEOInst.methods.contributorCapWei().call()).toLowerCase();
     compareAndLog("contributorCapWei: " ,jsonContributorCapWei, contributorCapWei);
@@ -226,6 +226,12 @@ async function main() {
 
     let distributedTokensTwei = (await IEOInst.methods.distributedTokensTwei().call()).toLowerCase();
     myLog(0, 0, ( "distributedTokensTwei: " + distributedTokensTwei));
+
+    abi = output.contracts["ERC20Interface.sol:ERC20"].interface;
+    let tokenInst = await new web3.eth.Contract(JSON.parse(abi), token);
+
+    let currentIEOBalance = (await tokenInst.methods.balanceOf(jsonIEOAddress).call());
+    myLog(0, 0, "IEO Balance: " + currentIEOBalance.valueOf())
 
     //handle IEO Rate
     /////////////////

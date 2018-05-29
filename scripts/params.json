@@ -17,7 +17,7 @@
     "whiteListAddresses": [
         "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb2"
     ],
-    "initialRate" : {
+    "initialRateEthToToken" : {
         "numerator" : "1234",
         "denominator" : "234454"
     },

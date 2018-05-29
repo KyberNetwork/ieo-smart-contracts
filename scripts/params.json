@@ -1,25 +1,25 @@
 {
     "constructor": {
-        "admin" : "0x65e2c5175e2e618f48e70343b14c31b280e42d90",
-        "projectWallet" : "0xff0cb0351a356ad16987e5809a8daaaf34f5adbe",
-        "token" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb0",
-        "contributorCapWei" : "12234454897348974",
-        "IEOId" : "1243322344",
-        "cappedIEOStart" : "Fri, 15 Sep 2018 06:00:00 GMT",
-        "publicIEOStartTime" : "Sat, 16 Sep 2018 06:00:00 GMT",
-        "publicIEOEndTime" : "Sun, 17 Sep 2018 06:00:00 GMT"
+        "admin" : "0x73E5c11b416De31F554b7f4Db65a7fC5a85E6Db4",
+        "projectWallet" : "0x1be6064ca70e40a39473372be0ac8a5e16f7be45",
+        "token" : "0x59ae9F1F6DDC98449CacCd1671143b11e3124662",
+        "contributorCapWei" : "10000000000000000000",
+        "IEOId" : "0x1234567",
+        "cappedIEOStart" : "Wed, 30 May 2018 07:30:00 GMT",
+        "publicIEOStartTime" : "Thu, 31 May 2018 07:30:00 GMT",
+        "publicIEOEndTime" : "Fri, 01 June 2018 07:30:00 GMT"
     },
     "operators" : {
-        "kyc" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb2",
-        "rate" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb1",
-        "alerter" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb3"
+        "kyc" : "0x3Cf628d49Ae46b49b210F0521Fbd9F82B461A9E1",
+        "rate" : "0x0000000000000000000000000000000000000000",
+        "alerter" : "0x1be6064ca70e40a39473372be0ac8a5e16f7be45"
     },
     "whiteListAddresses": [
         "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb2"
     ],
     "initialRate" : {
-        "numerator" : "1234",
-        "denominator" : "234454"
+        "numerator" : "1",
+        "denominator" : "4000"
     },
-    "output filename": "ropstenDeploy.json"
+    "output filename": "ropstenTrustIEO.json"
 }

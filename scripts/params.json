@@ -2,7 +2,7 @@
     "constructor": {
         "admin" : "0x65e2c5175e2e618f48e70343b14c31b280e42d90",
         "projectWallet" : "0xff0cb0351a356ad16987e5809a8daaaf34f5adbe",
-        "token" : "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb0",
+        "token" : "0xF5613c26cFd0479Dbf9e101695F5E142386F2F5F",
         "contributorCapWei" : "12234454897348974",
         "IEOId" : "1243322344",
         "cappedIEOStart" : "Fri, 15 Sep 2018 06:00:00 GMT",

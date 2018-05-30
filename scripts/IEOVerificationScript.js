@@ -88,7 +88,7 @@ function parseInput(jsonInput) {
     const ctorParams = jsonInput["constructor"];
     jsonAdmin = (ctorParams["admin"]).toLowerCase();
     jsonProjectWallet = ctorParams["projectWallet"];
-    jsonToken = ctorParams["token"];
+    jsonToken = (ctorParams["token"]).toLowerCase();
     jsonContributorCapWei = new BigNumber(ctorParams["contributorCapWei"]);
     jsonIEOId = new BigNumber(ctorParams["IEOId"]);
     jsonCappedIEOStart = dateToBigNumber(ctorParams["cappedIEOStart"]);
@@ -105,7 +105,7 @@ function parseInput(jsonInput) {
     jsonWhiteListedAddresses = jsonInput["whiteListAddresses"];
 
     // rate
-    const rateParams = jsonInput["rate"];
+    const rateParams = jsonInput["rateEthToToken"];
     jsonRateNumerator = new BigNumber(rateParams["numerator"]);
     jsonRateDenominator = new BigNumber(rateParams["denominator"]);
 };
@@ -186,7 +186,7 @@ async function main() {
     compareAndLog("ProjectWallet: " ,jsonProjectWallet, ProjectWallet);
 
     let token = (await IEOInst.methods.token().call()).toLowerCase();
-    compareAndLog("ProjectWallet: " ,jsonToken, token);
+    compareAndLog("token: " ,jsonToken, token);
 
     let contributorCapWei = (await IEOInst.methods.contributorCapWei().call()).toLowerCase();
     compareAndLog("contributorCapWei: " ,jsonContributorCapWei, contributorCapWei);
@@ -221,11 +221,18 @@ async function main() {
         compareAndLog("alerter " + i + ": ", jsonAlerter, alerters[i].toLowerCase());
     }
 
-    let raisedWei = (await IEOInst.methods.raisedWei().call()).toLowerCase();
+    let raisedWei = (await IEOInst.methods.raisedWei().call());
     myLog(0, 0, ( "raisedWei: " + raisedWei));
 
-    let distributedTokensTwei = (await IEOInst.methods.distributedTokensTwei().call()).toLowerCase();
+    let distributedTokensTwei = (await IEOInst.methods.distributedTokensTwei().call());
     myLog(0, 0, ( "distributedTokensTwei: " + distributedTokensTwei));
+
+    abi = output.contracts["ERC20Interface.sol:ERC20"].interface;
+    let tokenInst = await new web3.eth.Contract(JSON.parse(abi), token);
+
+    myLog(0, 0, "IEO Addres: " + jsonIEOAddress + " token:  " + token );
+    let currentIEOBalance = (await tokenInst.methods.balanceOf(jsonIEOAddress).call());
+    myLog(0, 0, "IEO Balance Twei: " + currentIEOBalance.valueOf())
 
     //handle IEO Rate
     /////////////////

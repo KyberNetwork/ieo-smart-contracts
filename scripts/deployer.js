@@ -168,8 +168,8 @@ function parseInput( jsonInput ) {
     //white listed address
     whiteListAddresses = jsonInput["whiteListAddresses"];
 
-    // initial rate
-    const initialRateParams = jsonInput["initialRate"];
+    // initial rate ether to token
+    const initialRateParams = jsonInput["initialRateEthToToken"];
     initialRateN = new BigNumber(initialRateParams["numerator"]);
     initialRateD = new BigNumber(initialRateParams["denominator"]);
 };
@@ -306,7 +306,7 @@ function printParams(jsonInput) {
     dictOutput["constructor"] = jsonInput["constructor"];
     dictOutput["operators"] = jsonInput["operators"];
     dictOutput["whiteListAddresses"] = jsonInput["whiteListAddresses"];
-    dictOutput["rate"] = jsonInput["initialRate"];
+    dictOutput["rateEthToToken"] = jsonInput["initialRateEthToToken"];
     const json = JSON.stringify(dictOutput, null, 2);
     console.log(json);
     const outputFileName = jsonInput["output filename"];

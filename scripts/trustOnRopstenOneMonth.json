@@ -1,0 +1,26 @@
+{
+  "IEO Address": "0xCb0d3dea928BaC316CD61dFa1154F0542DC1ffF0",
+  "IEO Rate Address": "0x224881A53165264E189e1D44529924cC88463BF0",
+  "constructor": {
+    "admin": "0x73E5c11b416De31F554b7f4Db65a7fC5a85E6Db4",
+    "projectWallet": "0x1BE6064cA70e40A39473372bE0ac8a5e16F7Be45",
+    "token": "0xF5613c26cFd0479Dbf9e101695F5E142386F2F5F",
+    "contributorCapWei": "10000000000000000000",
+    "IEOId": "19088743",
+    "cappedIEOStart": "Fri, 01 Jun 2018 11:20:00 GMT",
+    "publicIEOStartTime": "Mon, 04 Jun 2018 11:10:00 GMT",
+    "publicIEOEndTime": "Sun, 01 Jul 2018 11:10:00 GMT"
+  },
+  "operators": {
+    "kyc": "0xc59a39e4f4447d3e16c9ca63c94fb26235bc49f4",
+    "rate": "0x0000000000000000000000000000000000000000",
+    "alerter": "0xc59a39e4f4447d3e16c9ca63c94fb26235bc49f4"
+  },
+  "whiteListAddresses": [
+    "0x86fa049857e0209aa7d9e616f7eb3b3b78ecfdb2"
+  ],
+  "rateEthToToken": {
+    "numerator": "4000",
+    "denominator": "1"
+  }
+}

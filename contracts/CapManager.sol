@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
 
 import "./Withdrawable.sol";
@@ -84,7 +84,7 @@ contract CapManager is Withdrawable {
     }
 
     function validateContributor(address contributor, uint userId, uint8 v, bytes32 r, bytes32 s) public view returns(bool) {
-        require(verifySignature(keccak256(contributor, userId, IEOId), v, r, s));
+        require(verifySignature(keccak256(abi.encodePacked(contributor, userId, IEOId)), v, r, s));
         return true;
     }
 

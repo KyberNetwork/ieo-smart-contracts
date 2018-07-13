@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
 
 import "../ERC20Interface.sol";
@@ -12,7 +12,8 @@ contract MaliciousKyberNetwork {
     function() public payable {}
 
     function setPairRate(ERC20 src, ERC20 dest, uint rate) public {
-        pairRate[keccak256(src, dest)] = rate;
+        pairRate[keccak256(abi.encodePacked(src, dest))] = rate;
+        
     }
 
     // @dev trade function with same prototype as KyberNetwork
@@ -31,7 +32,7 @@ contract MaliciousKyberNetwork {
         payable
         returns(uint)
     {
-        uint rate = pairRate[keccak256(src, dest)];
+        uint rate = pairRate[keccak256(abi.encodePacked(src, dest))];
 
         walletId;
 
